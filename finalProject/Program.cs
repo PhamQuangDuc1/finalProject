@@ -1,7 +1,18 @@
+using BLL;
+using finalProject.Authorization;
+using finalProject.Hubs;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
+builder.Services.AddSignalR();
+builder.Services.AddStudyMateAuthorizationPolicies();
+
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? throw new InvalidOperationException("Connection string 'DefaultConnection' was not found.");
+
+builder.Services.AddBusinessServices(connectionString);
 
 var app = builder.Build();
 
@@ -25,5 +36,6 @@ app.MapControllerRoute(
     pattern: "{controller=Home}/{action=Index}/{id?}")
     .WithStaticAssets();
 
+app.MapHub<DocumentProcessingHub>("/hubs/document-processing");
 
 app.Run();

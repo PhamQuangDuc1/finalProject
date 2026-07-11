@@ -1,0 +1,49 @@
+using DAL.Data;
+using DAL.Entities;
+using DAL.Interfaces;
+using Microsoft.EntityFrameworkCore;
+
+namespace DAL.Repositories;
+
+public class DocumentRepository : IDocumentRepository
+{
+    private readonly AppDbContext _dbContext;
+
+    public DocumentRepository(AppDbContext dbContext)
+    {
+        _dbContext = dbContext;
+    }
+
+    public async Task<IReadOnlyList<Document>> GetAllForAdminAsync(CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.Documents
+            .Include(document => document.Subject)
+            .Include(document => document.UploadedByTeacher)
+            .OrderByDescending(document => document.UploadedAt)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<Document>> GetByTeacherAsync(int teacherId, CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.Documents
+            .Include(document => document.Subject)
+            .Where(document => document.UploadedByTeacherId == teacherId)
+            .OrderByDescending(document => document.UploadedAt)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<Document?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.Documents
+            .Include(document => document.Subject)
+            .Include(document => document.UploadedByTeacher)
+            .Include(document => document.Chunks)
+            .FirstOrDefaultAsync(document => document.Id == id, cancellationToken);
+    }
+
+    public async Task AddAsync(Document document, CancellationToken cancellationToken = default)
+    {
+        _dbContext.Documents.Add(document);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+    }
+}

@@ -1,0 +1,42 @@
+@model DocumentUploadViewModel
+
+@{
+    ViewData["Title"] = "Tải tài liệu lên";
+}
+
+<h1 class="h3 mb-3">Tải tài liệu lên</h1>
+
+<form asp-action="Upload" method="post" enctype="multipart/form-data" class="col-lg-6">
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+    <div class="mb-3">
+        <label asp-for="SubjectId" class="form-label"></label>
+        <input asp-for="SubjectId" class="form-control" />
+        <span asp-validation-for="SubjectId" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="UploadedByTeacherId" class="form-label"></label>
+        <input asp-for="UploadedByTeacherId" class="form-control" />
+        <span asp-validation-for="UploadedByTeacherId" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Title" class="form-label"></label>
+        <input asp-for="Title" class="form-control" />
+        <span asp-validation-for="Title" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="File" class="form-label"></label>
+        <input asp-for="File" class="form-control" />
+        <span asp-validation-for="File" class="text-danger"></span>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Đăng ký tài liệu</button>
+    <a class="btn btn-outline-secondary" asp-action="Index">Hủy</a>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

@@ -1,0 +1,36 @@
+@model IReadOnlyList<BLL.DTOs.DepartmentDto>
+
+@{
+    ViewData["Title"] = "Bộ môn";
+}
+
+<h1 class="h3 mb-3">Bộ môn</h1>
+
+<table class="table table-striped align-middle">
+    <thead>
+        <tr>
+            <th>Mã bộ môn</th>
+            <th>Tên bộ môn</th>
+            <th>Giảng viên quản lý</th>
+        </tr>
+    </thead>
+    <tbody>
+    @if (Model.Count == 0)
+    {
+        <tr>
+            <td colspan="3" class="text-muted">Chưa có bộ môn nào được tạo.</td>
+        </tr>
+    }
+    else
+    {
+        @foreach (var department in Model)
+        {
+            <tr>
+                <td>@department.Code</td>
+                <td>@department.Name</td>
+                <td>@department.ManagerTeacherName</td>
+            </tr>
+        }
+    }
+    </tbody>
+</table>

@@ -1,0 +1,50 @@
+@model IReadOnlyList<BLL.DTOs.DocumentDto>
+
+@{
+    ViewData["Title"] = "Tài liệu của tôi";
+}
+
+<div class="d-flex align-items-center justify-content-between mb-3">
+    <h1 class="h3 mb-0">Tài liệu của tôi</h1>
+    <a class="btn btn-primary" asp-controller="TeacherDocuments" asp-action="Upload">Tải tài liệu lên</a>
+</div>
+
+@if (TempData["StatusMessage"] is string statusMessage)
+{
+    <div class="alert alert-info" role="alert">@statusMessage</div>
+}
+
+<div class="table-responsive">
+    <table class="table table-striped align-middle">
+        <thead>
+            <tr>
+                <th>Tiêu đề</th>
+                <th>Môn học</th>
+                <th>Tệp</th>
+                <th>Trạng thái</th>
+                <th>Ngày tải lên</th>
+            </tr>
+        </thead>
+        <tbody>
+        @if (Model.Count == 0)
+        {
+            <tr>
+                <td colspan="5" class="text-muted">Giảng viên này chưa đăng ký tài liệu nào.</td>
+            </tr>
+        }
+        else
+        {
+            @foreach (var document in Model)
+            {
+                <tr>
+                    <td>@document.Title</td>
+                    <td>@document.SubjectName</td>
+                    <td>@document.FileName</td>
+                    <td>@document.Status</td>
+                    <td>@document.UploadedAtUtc.ToLocalTime().ToString("g")</td>
+                </tr>
+            }
+        }
+        </tbody>
+    </table>
+</div>

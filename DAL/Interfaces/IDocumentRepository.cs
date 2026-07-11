@@ -1,0 +1,14 @@
+using DAL.Entities;
+
+namespace DAL.Interfaces;
+
+public interface IDocumentRepository
+{
+    Task<IReadOnlyList<Document>> GetAllForAdminAsync(CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<Document>> GetByTeacherAsync(int teacherId, CancellationToken cancellationToken = default);
+
+    Task<Document?> GetByIdAsync(int id, CancellationToken cancellationToken = default);
+
+    Task AddAsync(Document document, CancellationToken cancellationToken = default);
+}
