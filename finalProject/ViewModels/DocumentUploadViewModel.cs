@@ -8,7 +8,6 @@ public class DocumentUploadViewModel
     [Display(Name = "ID môn học")]
     public int SubjectId { get; set; }
 
-    [Required]
     [Display(Name = "ID giảng viên")]
     public int UploadedByTeacherId { get; set; }
 

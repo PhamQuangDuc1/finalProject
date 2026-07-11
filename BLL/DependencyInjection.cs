@@ -10,10 +10,16 @@ public static class DependencyInjection
     public static IServiceCollection AddBusinessServices(this IServiceCollection services, string connectionString)
     {
         services.AddDataAccess(connectionString);
+        services.AddScoped<IAuthenticationService, AuthenticationService>();
+        services.AddScoped<IDashboardService, DashboardService>();
         services.AddScoped<IDocumentService, DocumentService>();
         services.AddScoped<IDepartmentService, DepartmentService>();
         services.AddScoped<ISubjectService, SubjectService>();
-        services.AddScoped<IChunkConfigurationService, ChunkConfigurationService>();
+        services.AddScoped<ITeacherAssignmentService, TeacherAssignmentService>();
+        services.AddScoped<ISystemSettingService, SystemSettingService>();
+        services.AddScoped<IChunkingService, ChunkingService>();
+        services.AddScoped<IChunkConfigurationService, ChunkingService>();
+        services.AddScoped<IAiUsageService, AiUsageService>();
         services.AddScoped<ITokenUsageStatisticsService, TokenUsageStatisticsService>();
 
         return services;

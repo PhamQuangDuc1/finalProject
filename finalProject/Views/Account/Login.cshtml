@@ -1,0 +1,49 @@
+@model LoginViewModel
+
+@{
+    ViewData["Title"] = "Đăng nhập";
+}
+
+<div class="auth-card">
+    <div>
+        <h1 class="h3 mb-3">Đăng nhập</h1>
+
+        <div class="alert alert-secondary">
+            <div class="fw-semibold mb-2">Tài khoản test</div>
+            <ul class="mb-0">
+                <li><strong>Admin:</strong> admin / 123456</li>
+                <li><strong>Teacher A:</strong> teacherA / 123456</li>
+                <li><strong>Teacher B:</strong> teacherB / 123456</li>
+                <li><strong>Student:</strong> student / 123456</li>
+            </ul>
+        </div>
+
+        <form asp-action="Login" method="post">
+            <input type="hidden" asp-for="ReturnUrl" />
+            <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+            <div class="mb-3">
+                <label asp-for="Username" class="form-label"></label>
+                <input asp-for="Username" class="form-control" autocomplete="username" />
+                <span asp-validation-for="Username" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Password" class="form-label"></label>
+                <input asp-for="Password" class="form-control" autocomplete="current-password" />
+                <span asp-validation-for="Password" class="text-danger"></span>
+            </div>
+
+            <div class="form-check mb-3">
+                <input asp-for="RememberMe" class="form-check-input" />
+                <label asp-for="RememberMe" class="form-check-label">Ghi nhớ đăng nhập</label>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Đăng nhập</button>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

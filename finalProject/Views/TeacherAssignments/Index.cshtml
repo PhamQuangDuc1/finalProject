@@ -1,0 +1,76 @@
+@model TeacherAssignmentsIndexViewModel
+
+@{
+    ViewData["Title"] = "Phân công giảng viên";
+}
+
+<div class="d-flex align-items-center justify-content-between mb-3">
+    <div>
+        <h1 class="h3 mb-1">Phân công giảng viên</h1>
+        <p class="text-muted mb-0">Phân công giảng viên dạy môn học. Vai trò này tách biệt với giảng viên quản lý bộ môn.</p>
+    </div>
+</div>
+
+<section class="card-panel mb-4">
+    <h2 class="section-title">Gán giảng viên vào môn học</h2>
+    <form asp-action="Assign" method="post" class="row g-3 align-items-end">
+        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+        <div class="col-md-5">
+            <label asp-for="Form.TeacherId" class="form-label">Giảng viên</label>
+            <select asp-for="Form.TeacherId" asp-items="Model.Form.TeacherOptions" class="form-select">
+                <option value="">Chọn giảng viên</option>
+            </select>
+            <span asp-validation-for="Form.TeacherId" class="text-danger"></span>
+        </div>
+        <div class="col-md-5">
+            <label asp-for="Form.SubjectId" class="form-label">Môn học</label>
+            <select asp-for="Form.SubjectId" asp-items="Model.Form.SubjectOptions" class="form-select">
+                <option value="">Chọn môn học</option>
+            </select>
+            <span asp-validation-for="Form.SubjectId" class="text-danger"></span>
+        </div>
+        <div class="col-md-2">
+            <button type="submit" class="btn btn-primary w-100">Gán</button>
+        </div>
+    </form>
+</section>
+
+<section class="card-panel">
+    <h2 class="section-title">Danh sách phân công</h2>
+    <div class="table-responsive">
+        <table class="table table-striped align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>Giảng viên</th>
+                    <th>Môn học</th>
+                    <th>Bộ môn</th>
+                    <th>Ngày phân công</th>
+                </tr>
+            </thead>
+            <tbody>
+            @if (Model.Assignments.Count == 0)
+            {
+                <tr>
+                    <td colspan="4" class="text-muted">Chưa có phân công nào.</td>
+                </tr>
+            }
+            else
+            {
+                @foreach (var assignment in Model.Assignments)
+                {
+                    <tr>
+                        <td>@assignment.TeacherName</td>
+                        <td>@assignment.SubjectName</td>
+                        <td>@assignment.DepartmentName</td>
+                        <td>@assignment.AssignedAt.ToLocalTime().ToString("g")</td>
+                    </tr>
+                }
+            }
+            </tbody>
+        </table>
+    </div>
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

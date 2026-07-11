@@ -1,4 +1,5 @@
 <Solution>
+  <Project Path="BLL.Tests/BLL.Tests.csproj" />
   <Project Path="BLL/BLL.csproj" />
   <Project Path="DAL/DAL.csproj" />
   <Project Path="finalProject/finalProject.csproj" />

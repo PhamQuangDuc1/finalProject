@@ -1,0 +1,40 @@
+@model AssignManagerViewModel
+
+@{
+    ViewData["Title"] = "Quản lý bộ môn";
+}
+
+<section class="card-panel">
+    <h1 class="section-title">Quản lý bộ môn</h1>
+    <p class="text-muted">Bộ môn: <strong>@Model.DepartmentName</strong></p>
+
+    @if (!string.IsNullOrWhiteSpace(Model.CurrentManagerName))
+    {
+        <div class="alert alert-warning">
+            Giảng viên quản lý hiện tại là <strong>@Model.CurrentManagerName</strong>. Hãy gỡ người quản lý hiện tại trước khi gán giảng viên khác.
+        </div>
+        <form asp-action="RemoveManager" asp-route-id="@Model.DepartmentId" method="post" class="mb-3">
+            <button type="submit" class="btn btn-outline-danger">Gỡ người quản lý</button>
+        </form>
+    }
+
+    <form asp-action="AssignManager" method="post">
+        <input type="hidden" asp-for="DepartmentId" />
+        <input type="hidden" asp-for="DepartmentName" />
+        <input type="hidden" asp-for="CurrentManagerName" />
+        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+        <div class="mb-3">
+            <label asp-for="TeacherId" class="form-label">Giảng viên</label>
+            <select asp-for="TeacherId" asp-items="Model.TeacherOptions" class="form-select" disabled="@(!string.IsNullOrWhiteSpace(Model.CurrentManagerName))">
+                <option value="">Chọn giảng viên</option>
+            </select>
+            <span asp-validation-for="TeacherId" class="text-danger"></span>
+        </div>
+        <button type="submit" class="btn btn-primary" disabled="@(!string.IsNullOrWhiteSpace(Model.CurrentManagerName))">Gán</button>
+        <a class="btn btn-outline-secondary" asp-action="Index">Hủy</a>
+    </form>
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

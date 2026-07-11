@@ -13,9 +13,13 @@ public static class DependencyInjection
         services.AddDbContext<AppDbContext>(options =>
             options.UseSqlServer(connectionString));
 
-        services.AddScoped<IDocumentRepository, DocumentRepository>();
+        services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IDepartmentRepository, DepartmentRepository>();
         services.AddScoped<ISubjectRepository, SubjectRepository>();
+        services.AddScoped<ITeacherSubjectRepository, TeacherSubjectRepository>();
+        services.AddScoped<IDocumentRepository, DocumentRepository>();
+        services.AddScoped<ISystemSettingRepository, SystemSettingRepository>();
+        services.AddScoped<IAiUsageRepository, AiUsageRepository>();
         services.AddScoped<ITokenUsageRepository, TokenUsageRepository>();
 
         return services;

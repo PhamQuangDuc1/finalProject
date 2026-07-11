@@ -1,9 +1,12 @@
 using BLL.DTOs;
 using BLL.Interfaces;
+using finalProject.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace finalProject.Controllers;
 
+[Authorize(Roles = StudyMateRoles.Admin)]
 public class DocumentsController : Controller
 {
     private readonly IDocumentService _documentService;

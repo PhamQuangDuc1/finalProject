@@ -485,9 +485,9 @@ namespace DAL.Migrations
                         {
                             Id = 1,
                             CreatedAt = new DateTime(2026, 7, 11, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FullName = "Quản trị viên",
+                            FullName = "Admin",
                             IsActive = true,
-                            PasswordHash = "seed-admin-password-hash",
+                            PasswordHash = "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92",
                             Role = 2,
                             Username = "admin"
                         },
@@ -495,31 +495,31 @@ namespace DAL.Migrations
                         {
                             Id = 2,
                             CreatedAt = new DateTime(2026, 7, 11, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FullName = "Nguyễn Văn Giảng",
+                            FullName = "Teacher A",
                             IsActive = true,
-                            PasswordHash = "seed-teacher01-password-hash",
+                            PasswordHash = "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92",
                             Role = 1,
-                            Username = "teacher01"
+                            Username = "teacherA"
                         },
                         new
                         {
                             Id = 3,
                             CreatedAt = new DateTime(2026, 7, 11, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FullName = "Trần Thị Dạy",
+                            FullName = "Teacher B",
                             IsActive = true,
-                            PasswordHash = "seed-teacher02-password-hash",
+                            PasswordHash = "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92",
                             Role = 1,
-                            Username = "teacher02"
+                            Username = "teacherB"
                         },
                         new
                         {
                             Id = 4,
                             CreatedAt = new DateTime(2026, 7, 11, 0, 0, 0, 0, DateTimeKind.Utc),
-                            FullName = "Lê Minh Sinh",
+                            FullName = "Student",
                             IsActive = true,
-                            PasswordHash = "seed-student01-password-hash",
+                            PasswordHash = "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92",
                             Role = 0,
-                            Username = "student01"
+                            Username = "student"
                         });
                 });
 

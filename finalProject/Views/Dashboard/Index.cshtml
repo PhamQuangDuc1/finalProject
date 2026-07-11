@@ -1,0 +1,88 @@
+@model BLL.DTOs.DashboardDto
+@using DAL.Entities
+
+@{
+    ViewData["Title"] = Model.Title;
+}
+
+<div class="dashboard-header">
+    <div>
+        <h1>@Model.Title</h1>
+        <p>Không gian tổng quan cho vai trò hiện tại trong StudyMate AI.</p>
+    </div>
+</div>
+
+<section class="metric-grid">
+    @foreach (var metric in Model.Metrics)
+    {
+        <article class="metric-card">
+            <span>@metric.Label</span>
+            <strong>@metric.Value</strong>
+        </article>
+    }
+</section>
+
+@if (Model.Role == UserRole.Admin)
+{
+    <section class="dashboard-grid">
+        <article class="card-panel">
+            <h2 class="section-title">Documents by Teacher</h2>
+            @if (Model.DocumentsByTeacher.Count == 0)
+            {
+                <p class="text-muted mb-0">Chưa có dữ liệu tài liệu theo giảng viên.</p>
+            }
+            else
+            {
+                <div class="list-stack">
+                    @foreach (var item in Model.DocumentsByTeacher)
+                    {
+                        <div class="list-row">
+                            <span>@item.TeacherName</span>
+                            <strong>@item.DocumentCount</strong>
+                        </div>
+                    }
+                </div>
+            }
+        </article>
+
+        <article class="card-panel">
+            <h2 class="section-title">Recent Uploads</h2>
+            <partial name="_RecentUploads" model="Model.RecentUploads" />
+        </article>
+    </section>
+}
+
+@if (Model.Role == UserRole.Teacher)
+{
+    <section class="card-panel">
+        <h2 class="section-title">Recent Uploads</h2>
+        <partial name="_RecentUploads" model="Model.RecentUploads" />
+    </section>
+}
+
+@if (Model.Role == UserRole.Student)
+{
+    <section class="dashboard-grid">
+        <article class="card-panel">
+            <h2 class="section-title">Tài liệu mới</h2>
+            <partial name="_RecentUploads" model="Model.RecentUploads" />
+        </article>
+
+        <article class="card-panel">
+            <h2 class="section-title">Subjects</h2>
+            @if (Model.Subjects.Count == 0)
+            {
+                <p class="text-muted mb-0">Chưa có môn học khả dụng.</p>
+            }
+            else
+            {
+                <div class="tag-list">
+                    @foreach (var subject in Model.Subjects)
+                    {
+                        <span>@subject</span>
+                    }
+                </div>
+            }
+        </article>
+    </section>
+}

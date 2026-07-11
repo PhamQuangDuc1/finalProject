@@ -284,10 +284,10 @@ public class AppDbContext : DbContext
     private static void SeedData(ModelBuilder modelBuilder, DateTime createdAt)
     {
         modelBuilder.Entity<User>().HasData(
-            new User { Id = 1, Username = "admin", PasswordHash = "seed-admin-password-hash", FullName = "Quản trị viên", Role = UserRole.Admin, IsActive = true, CreatedAt = createdAt },
-            new User { Id = 2, Username = "teacher01", PasswordHash = "seed-teacher01-password-hash", FullName = "Nguyễn Văn Giảng", Role = UserRole.Teacher, IsActive = true, CreatedAt = createdAt },
-            new User { Id = 3, Username = "teacher02", PasswordHash = "seed-teacher02-password-hash", FullName = "Trần Thị Dạy", Role = UserRole.Teacher, IsActive = true, CreatedAt = createdAt },
-            new User { Id = 4, Username = "student01", PasswordHash = "seed-student01-password-hash", FullName = "Lê Minh Sinh", Role = UserRole.Student, IsActive = true, CreatedAt = createdAt });
+            new User { Id = 1, Username = "admin", PasswordHash = "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92", FullName = "Admin", Role = UserRole.Admin, IsActive = true, CreatedAt = createdAt },
+            new User { Id = 2, Username = "teacherA", PasswordHash = "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92", FullName = "Teacher A", Role = UserRole.Teacher, IsActive = true, CreatedAt = createdAt },
+            new User { Id = 3, Username = "teacherB", PasswordHash = "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92", FullName = "Teacher B", Role = UserRole.Teacher, IsActive = true, CreatedAt = createdAt },
+            new User { Id = 4, Username = "student", PasswordHash = "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92", FullName = "Student", Role = UserRole.Student, IsActive = true, CreatedAt = createdAt });
 
         modelBuilder.Entity<Department>().HasData(
             new Department { Id = 1, Code = "SE", Name = "Bộ môn Kỹ thuật phần mềm", Description = "Quản lý các môn học thuộc nhóm kỹ thuật phần mềm.", ManagerTeacherId = 2, CreatedAt = createdAt });

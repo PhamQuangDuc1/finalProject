@@ -1,8 +1,11 @@
 using BLL.Interfaces;
+using finalProject.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace finalProject.Controllers;
 
+[Authorize(Roles = StudyMateRoles.Admin)]
 public class TokenUsageController : Controller
 {
     private readonly ITokenUsageStatisticsService _tokenUsageStatisticsService;

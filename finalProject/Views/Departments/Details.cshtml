@@ -1,0 +1,27 @@
+@model BLL.DTOs.DepartmentDto
+
+@{
+    ViewData["Title"] = "Chi tiết bộ môn";
+}
+
+<section class="card-panel">
+    <h1 class="section-title">Chi tiết bộ môn</h1>
+    <dl class="row mb-0">
+        <dt class="col-sm-3">Mã bộ môn</dt>
+        <dd class="col-sm-9">@Model.Code</dd>
+        <dt class="col-sm-3">Tên bộ môn</dt>
+        <dd class="col-sm-9">@Model.Name</dd>
+        <dt class="col-sm-3">Mô tả</dt>
+        <dd class="col-sm-9">@(string.IsNullOrWhiteSpace(Model.Description) ? "Không có" : Model.Description)</dd>
+        <dt class="col-sm-3">Giảng viên quản lý</dt>
+        <dd class="col-sm-9">@(string.IsNullOrWhiteSpace(Model.ManagerTeacherName) ? "Chưa có" : Model.ManagerTeacherName)</dd>
+        <dt class="col-sm-3">Số môn học</dt>
+        <dd class="col-sm-9">@Model.NumberOfSubjects</dd>
+        <dt class="col-sm-3">Ngày tạo</dt>
+        <dd class="col-sm-9">@Model.CreatedAt.ToLocalTime().ToString("g")</dd>
+    </dl>
+    <div class="mt-3">
+        <a class="btn btn-outline-primary" asp-action="Edit" asp-route-id="@Model.Id">Sửa</a>
+        <a class="btn btn-outline-secondary" asp-action="Index">Quay lại</a>
+    </div>
+</section>

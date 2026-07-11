@@ -1,0 +1,18 @@
+@model DepartmentFormViewModel
+
+@{
+    ViewData["Title"] = "Tạo bộ môn";
+}
+
+<section class="card-panel">
+    <h1 class="section-title">Tạo bộ môn</h1>
+    <form asp-action="Create" method="post">
+        <partial name="_DepartmentForm" model="Model" />
+        <button type="submit" class="btn btn-primary">Tạo</button>
+        <a class="btn btn-outline-secondary" asp-action="Index">Hủy</a>
+    </form>
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

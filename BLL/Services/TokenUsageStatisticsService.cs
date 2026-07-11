@@ -7,28 +7,27 @@ namespace BLL.Services;
 public class TokenUsageStatisticsService : ITokenUsageStatisticsService
 {
     private readonly ITokenUsageRepository _tokenUsageRepository;
+    private readonly IAiUsageService _aiUsageService;
 
-    public TokenUsageStatisticsService(ITokenUsageRepository tokenUsageRepository)
+    public TokenUsageStatisticsService(ITokenUsageRepository tokenUsageRepository, IAiUsageService aiUsageService)
     {
         _tokenUsageRepository = tokenUsageRepository;
+        _aiUsageService = aiUsageService;
     }
 
     public async Task<IReadOnlyList<TokenUsageMonthlySummaryDto>> GetMonthlySummariesAsync(CancellationToken cancellationToken = default)
     {
-        var logs = await _tokenUsageRepository.GetLogsAsync(cancellationToken);
+        var summaries = await _aiUsageService.GetMonthlySummaryAsync(
+            new CurrentUserDto { UserId = 1, Role = DAL.Entities.UserRole.Admin },
+            cancellationToken);
 
-        return logs
-            .GroupBy(log => new { log.CreatedAt.Year, log.CreatedAt.Month })
-            .Select(group => new TokenUsageMonthlySummaryDto
+        return summaries.Select(summary => new TokenUsageMonthlySummaryDto
             {
-                Year = group.Key.Year,
-                Month = group.Key.Month,
-                PromptTokens = group.Sum(log => log.PromptTokens),
-                CompletionTokens = group.Sum(log => log.CompletionTokens),
-                EstimatedCostUsd = group.Sum(log => log.EstimatedCost)
-            })
-            .OrderByDescending(summary => summary.Year)
-            .ThenByDescending(summary => summary.Month)
-            .ToList();
+                Year = summary.Year,
+                Month = summary.Month,
+                PromptTokens = summary.TotalTokens,
+                CompletionTokens = 0,
+                EstimatedCostUsd = summary.EstimatedCost
+            }).ToList();
     }
 }
