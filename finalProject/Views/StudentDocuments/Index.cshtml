@@ -46,7 +46,7 @@
                         <td>@document.UploadedAtUtc.ToLocalTime().ToString("g")</td>
                         <td>
                             <div class="btn-group btn-group-sm" role="group">
-                                <a class="btn btn-outline-primary" asp-action="ViewDocument" asp-route-id="@document.Id">Xem</a>
+                                <a class="btn btn-outline-primary" asp-action="Details" asp-route-id="@document.Id">Xem</a>
                                 <a class="btn btn-outline-primary" asp-action="Download" asp-route-id="@document.Id">Tải xuống</a>
                             </div>
                         </td>

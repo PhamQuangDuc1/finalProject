@@ -2,7 +2,8 @@ namespace DAL.Entities;
 
 public enum ChunkStrategy
 {
-    FixedSize = 0,
-    Paragraph = 1,
-    Hybrid = 2
+    Paragraph = 0,
+    Words = 1,
+    Characters = 2,
+    FixedSize = 3
 }

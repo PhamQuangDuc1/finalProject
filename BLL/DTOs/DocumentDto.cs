@@ -20,9 +20,13 @@ public class DocumentDto
 
     public string Title { get; set; } = string.Empty;
 
+    public string? Description { get; set; }
+
     public string FileName { get; set; } = string.Empty;
 
     public string FilePath { get; set; } = string.Empty;
+
+    public string ContentType { get; set; } = string.Empty;
 
     public long FileSize { get; set; }
 
@@ -33,4 +37,12 @@ public class DocumentDto
     public bool IsArchived { get; set; }
 
     public DateTime UploadedAtUtc { get; set; }
+
+    public DateTime? UpdatedAtUtc { get; set; }
+
+    public DateTime? ArchivedAtUtc { get; set; }
+
+    public int? ArchivedByTeacherId { get; set; }
+
+    public string? ErrorMessage { get; set; }
 }

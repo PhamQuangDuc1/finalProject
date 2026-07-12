@@ -16,6 +16,31 @@
     <div class="alert alert-info" role="alert">@statusMessage</div>
 }
 
+<section class="card-panel mb-4" data-document-realtime="admin">
+    <div class="d-flex align-items-center justify-content-between mb-2">
+        <h2 class="section-title mb-0">Realtime document notifications</h2>
+        <span class="badge text-bg-secondary" id="documentRealtimeStatus">Connecting</span>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>Teacher uploader</th>
+                    <th>Document</th>
+                    <th>Subject</th>
+                    <th>Action</th>
+                    <th>Time</th>
+                </tr>
+            </thead>
+            <tbody id="documentRealtimeNotifications">
+                <tr data-empty-realtime-row="true">
+                    <td colspan="5" class="text-muted">Chưa có notification realtime trong phiên này.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
 <section class="card-panel">
     <div class="table-responsive">
         <table class="table table-striped align-middle mb-0">
@@ -31,10 +56,10 @@
                     <th>Thao tác</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody data-documents-table-body>
             @if (Model.Count == 0)
             {
-                <tr>
+                <tr data-empty-documents-row="true">
                     <td colspan="8" class="text-muted">Chưa có tài liệu nào được đăng ký.</td>
                 </tr>
             }
@@ -42,17 +67,17 @@
             {
                 @foreach (var document in Model)
                 {
-                    <tr>
+                    <tr data-document-id="@document.Id">
                         <td>@document.Title</td>
                         <td>@document.SubjectName</td>
                         <td>@document.DepartmentName</td>
                         <td>@document.UploadedByTeacherName</td>
                         <td>@document.UploadedAtUtc.ToLocalTime().ToString("g")</td>
-                        <td>@document.Status</td>
+                        <td data-document-status>@document.Status</td>
                         <td>@document.ChunkCount</td>
                         <td>
                             <div class="btn-group btn-group-sm" role="group">
-                                <a class="btn btn-outline-primary" asp-action="ViewDocument" asp-route-id="@document.Id">Xem</a>
+                                <a class="btn btn-outline-primary" asp-action="Details" asp-route-id="@document.Id">Xem</a>
                                 <a class="btn btn-outline-primary" asp-action="Download" asp-route-id="@document.Id">Tải xuống</a>
                             </div>
                         </td>

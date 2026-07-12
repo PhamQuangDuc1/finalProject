@@ -5,4 +5,12 @@
 <div class="text-center">
     <h1 class="display-4">StudyMate AI</h1>
     <p>Nền tảng quản lý tài liệu môn học cho trợ lý học tập tiếng Việt.</p>
+    @if (User.Identity?.IsAuthenticated == true)
+    {
+        <a class="btn btn-primary mt-3" asp-controller="Dashboard" asp-action="Index">Vào bảng điều khiển</a>
+    }
+    else
+    {
+        <a class="btn btn-primary mt-3" asp-controller="Account" asp-action="Login">Đăng nhập</a>
+    }
 </div>

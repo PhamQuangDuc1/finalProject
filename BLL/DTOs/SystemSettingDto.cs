@@ -15,4 +15,8 @@ public class SystemSettingDto
     public int TopK { get; set; }
 
     public DateTime UpdatedAt { get; set; }
+
+    public int UpdatedByAdminId { get; set; }
+
+    public string UpdatedByAdminName { get; set; } = string.Empty;
 }

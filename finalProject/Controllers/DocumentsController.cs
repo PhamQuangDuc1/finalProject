@@ -25,11 +25,16 @@ public class DocumentsController : Controller
         return View(documents);
     }
 
-    public async Task<IActionResult> ViewDocument(int id, CancellationToken cancellationToken)
+    public IActionResult ViewDocument(int id)
+    {
+        return RedirectToAction(nameof(Details), new { id });
+    }
+
+    public async Task<IActionResult> Details(int id, CancellationToken cancellationToken)
     {
         var document = await _documentService.GetDocumentByIdAsync(GetCurrentUser(), id, cancellationToken);
 
-        return document is null ? NotFound() : Content($"{document.Title}\n{document.SubjectName}\n{document.UploadedByTeacherName}", "text/plain");
+        return document is null ? NotFound() : View(document);
     }
 
     public async Task<IActionResult> Download(int id, CancellationToken cancellationToken)

@@ -96,6 +96,8 @@ public class AppDbContext : DbContext
                 .WithMany(user => user.ManagedDepartments)
                 .HasForeignKey(department => department.ManagerTeacherId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            entity.ToTable(table => table.HasTrigger("TR_Departments_ManagerTeacherRole"));
         });
     }
 
@@ -140,6 +142,8 @@ public class AppDbContext : DbContext
                 .WithMany(subject => subject.TeacherSubjects)
                 .HasForeignKey(teacherSubject => teacherSubject.SubjectId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            entity.ToTable(table => table.HasTrigger("TR_TeacherSubjects_TeacherRole"));
         });
     }
 
@@ -213,9 +217,13 @@ public class AppDbContext : DbContext
                 .HasForeignKey(document => document.ArchivedByTeacherId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            entity.ToTable(table => table.HasCheckConstraint(
-                "CK_Documents_Status",
-                "[Status] IN (0, 1, 2, 3, 4)"));
+            entity.ToTable(table =>
+            {
+                table.HasCheckConstraint(
+                    "CK_Documents_Status",
+                    "[Status] IN (0, 1, 2, 3, 4)");
+                table.HasTrigger("TR_Documents_TeacherRoles");
+            });
         });
     }
 
@@ -245,9 +253,13 @@ public class AppDbContext : DbContext
                 .HasForeignKey(setting => setting.UpdatedByAdminId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            entity.ToTable(table => table.HasCheckConstraint(
-                "CK_SystemSettings_ChunkStrategy",
-                "[ChunkStrategy] IN (0, 1, 2)"));
+            entity.ToTable(table =>
+            {
+                table.HasCheckConstraint(
+                    "CK_SystemSettings_ChunkStrategy",
+                    "[ChunkStrategy] IN (0, 1, 2, 3)");
+                table.HasTrigger("TR_SystemSettings_AdminRole");
+            });
         });
     }
 

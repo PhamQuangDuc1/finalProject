@@ -17,6 +17,31 @@
     <div class="alert alert-info" role="alert">@statusMessage</div>
 }
 
+<section class="card-panel mb-4" data-document-realtime="teacher">
+    <div class="d-flex align-items-center justify-content-between mb-2">
+        <h2 class="section-title mb-0">Realtime tài liệu của tôi</h2>
+        <span class="badge text-bg-secondary" id="documentRealtimeStatus">Connecting</span>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>Document</th>
+                    <th>Subject</th>
+                    <th>Action</th>
+                    <th>Status</th>
+                    <th>Time</th>
+                </tr>
+            </thead>
+            <tbody id="documentRealtimeNotifications">
+                <tr data-empty-realtime-row="true">
+                    <td colspan="5" class="text-muted">Chưa có notification realtime trong phiên này.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
 <section class="card-panel mb-4">
     <form asp-action="Index" method="get" class="row g-3 align-items-end">
         <div class="col-md-3">
@@ -64,10 +89,10 @@
                     <th>Thao tác</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody data-documents-table-body>
             @if (Model.Documents.Count == 0)
             {
-                <tr>
+                <tr data-empty-documents-row="true">
                     <td colspan="9" class="text-muted">Không có tài liệu phù hợp.</td>
                 </tr>
             }
@@ -75,18 +100,18 @@
             {
                 @foreach (var document in Model.Documents)
                 {
-                    <tr>
+                    <tr data-document-id="@document.Id">
                         <td>@document.Title</td>
                         <td>@document.SubjectName</td>
                         <td>@document.DepartmentName</td>
                         <td>@(string.IsNullOrWhiteSpace(document.ChapterName) ? "Chưa gán" : document.ChapterName)</td>
                         <td>@document.FileName</td>
-                        <td>@document.Status</td>
+                        <td data-document-status>@document.Status</td>
                         <td>@document.ChunkCount</td>
                         <td>@document.UploadedAtUtc.ToLocalTime().ToString("g")</td>
                         <td>
                             <div class="d-flex flex-wrap gap-1">
-                                <a class="btn btn-sm btn-outline-primary" asp-action="ViewDocument" asp-route-id="@document.Id">Xem</a>
+                                <a class="btn btn-sm btn-outline-primary" asp-action="Details" asp-route-id="@document.Id">Xem</a>
                                 <a class="btn btn-sm btn-outline-primary" asp-action="Edit" asp-route-id="@document.Id">Sửa</a>
                                 <a class="btn btn-sm btn-outline-primary" asp-action="Download" asp-route-id="@document.Id">Tải xuống</a>
                                 <form asp-action="Archive" asp-route-id="@document.Id" method="post">

@@ -24,7 +24,7 @@ public class DocumentServiceTests
                 departmentName: "Software Engineering",
                 chunkCount: 3)
         };
-        var service = new DocumentService(new FakeDocumentRepository(documents), new FakeTeacherSubjectRepository(), new FakeSystemSettingService());
+        var service = new DocumentService(new FakeDocumentRepository(documents), new FakeTeacherSubjectRepository(), new FakeChunkingService());
 
         var result = await service.GetDocumentsForAdminAsync(new CurrentUserDto { UserId = 1, Role = UserRole.Admin });
 
@@ -44,7 +44,7 @@ public class DocumentServiceTests
             CreateDocument(3, 2, DocumentStatus.Indexed, false, "Wrong Subject", 11, "SWE201", "Software Engineering", 1),
             CreateDocument(4, 3, DocumentStatus.Indexed, false, "Other Teacher", 10, "PRN222", "Software Engineering", 1)
         };
-        var service = new DocumentService(new FakeDocumentRepository(documents), new FakeTeacherSubjectRepository(), new FakeSystemSettingService());
+        var service = new DocumentService(new FakeDocumentRepository(documents), new FakeTeacherSubjectRepository(), new FakeChunkingService());
 
         var result = await service.GetDocumentsForTeacherAsync(
             new CurrentUserDto { UserId = 2, Role = UserRole.Teacher },
@@ -62,7 +62,7 @@ public class DocumentServiceTests
         var service = new DocumentService(
             repository,
             new FakeTeacherSubjectRepository(assignedSubjectIds: new[] { 10 }),
-            new FakeSystemSettingService(chunkSize: 5, chunkOverlap: 1));
+            new FakeChunkingService(chunkSize: 5, chunkOverlap: 1));
 
         var documentId = await service.UploadDocumentAsync(
             new CurrentUserDto { UserId = 2, Role = UserRole.Teacher },
@@ -93,7 +93,7 @@ public class DocumentServiceTests
         var service = new DocumentService(
             new FakeDocumentRepository(Array.Empty<Document>()),
             new FakeTeacherSubjectRepository(assignedSubjectIds: Array.Empty<int>()),
-            new FakeSystemSettingService());
+            new FakeChunkingService());
 
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() => service.UploadDocumentAsync(
             new CurrentUserDto { UserId = 2, Role = UserRole.Teacher },
@@ -107,6 +107,59 @@ public class DocumentServiceTests
                 FileContent = "content"u8.ToArray(),
                 StorageRootPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"))
             }));
+    }
+
+    [Fact]
+    public async Task GetDocumentByIdAsync_ThrowsForStudent_WhenSubjectIsInactive()
+    {
+        var document = CreateDocument(1, 2, DocumentStatus.Indexed, false, "Inactive", 10, "PRN222", "Software Engineering", 1);
+        document.Subject!.IsActive = false;
+        var service = new DocumentService(new FakeDocumentRepository(new[] { document }), new FakeTeacherSubjectRepository(), new FakeChunkingService());
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => service.GetDocumentByIdAsync(
+            new CurrentUserDto { UserId = 4, Role = UserRole.Student },
+            document.Id));
+    }
+
+    [Fact]
+    public async Task UpdateDocumentAsync_Throws_WhenTeacherSelectsUnassignedSubject()
+    {
+        var document = CreateDocument(1, 2, DocumentStatus.Indexed, false, "Owned", 10, "PRN222", "Software Engineering", 1);
+        var service = new DocumentService(
+            new FakeDocumentRepository(new[] { document }),
+            new FakeTeacherSubjectRepository(assignedSubjectIds: new[] { 10 }),
+            new FakeChunkingService());
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => service.UpdateDocumentAsync(
+            new CurrentUserDto { UserId = 2, Role = UserRole.Teacher },
+            new UpdateDocumentDto
+            {
+                Id = document.Id,
+                SubjectId = 99,
+                Title = "New title"
+            }));
+    }
+
+    [Fact]
+    public async Task ReindexDocumentAsync_ReplacesChunksUsingLatestSystemSetting()
+    {
+        var storagePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.pdf");
+        await File.WriteAllTextAsync(storagePath, "one two three four five six seven eight");
+        var document = CreateDocument(1, 2, DocumentStatus.Indexed, false, "Owned", 10, "PRN222", "Software Engineering", 1);
+        document.FilePath = storagePath;
+        document.OriginalFileName = "owned.pdf";
+        var repository = new FakeDocumentRepository(new[] { document });
+        var service = new DocumentService(
+            repository,
+            new FakeTeacherSubjectRepository(assignedSubjectIds: new[] { 10 }),
+            new FakeChunkingService(chunkSize: 3, chunkOverlap: 0));
+
+        await service.ReindexDocumentAsync(new CurrentUserDto { UserId = 2, Role = UserRole.Teacher }, document.Id);
+
+        Assert.Equal(DocumentStatus.Indexed, document.Status);
+        Assert.True(repository.ReplaceChunkTransactionCalls > 0);
+        Assert.True(document.Chunks.Count >= 3);
+        Assert.All(document.Chunks, chunk => Assert.True(chunk.TokenCount <= 3));
     }
 
     private static Document CreateDocument(
@@ -189,6 +242,20 @@ public class DocumentServiceTests
         {
             return Task.CompletedTask;
         }
+
+        public int ReplaceChunkTransactionCalls { get; private set; }
+
+        public Task ReplaceChunksInTransactionAsync(Document document, IReadOnlyList<DocumentChunk> chunks, CancellationToken cancellationToken = default)
+        {
+            ReplaceChunkTransactionCalls++;
+            document.Chunks.Clear();
+            foreach (var chunk in chunks)
+            {
+                document.Chunks.Add(chunk);
+            }
+
+            return Task.CompletedTask;
+        }
     }
 
     private sealed class FakeTeacherSubjectRepository : ITeacherSubjectRepository
@@ -207,7 +274,24 @@ public class DocumentServiceTests
 
         public Task<IReadOnlyList<TeacherSubject>> GetByTeacherAsync(int teacherId, CancellationToken cancellationToken = default)
         {
-            return Task.FromResult<IReadOnlyList<TeacherSubject>>(Array.Empty<TeacherSubject>());
+            var assignments = _assignedSubjectIds
+                .Select(subjectId => new TeacherSubject
+                {
+                    TeacherId = teacherId,
+                    SubjectId = subjectId,
+                    Subject = new Subject
+                    {
+                        Id = subjectId,
+                        IsActive = true,
+                        Chapters = new List<Chapter>
+                        {
+                            new() { Id = subjectId * 100 + 1, SubjectId = subjectId, Name = "Chapter 1" }
+                        }
+                    }
+                })
+                .ToList();
+
+            return Task.FromResult<IReadOnlyList<TeacherSubject>>(assignments);
         }
 
         public Task<bool> ExistsAsync(int teacherId, int subjectId, CancellationToken cancellationToken = default)
@@ -221,18 +305,18 @@ public class DocumentServiceTests
         }
     }
 
-    private sealed class FakeSystemSettingService : ISystemSettingService
+    private sealed class FakeChunkingService : IChunkingService
     {
         private readonly int _chunkSize;
         private readonly int _chunkOverlap;
 
-        public FakeSystemSettingService(int chunkSize = 1100, int chunkOverlap = 150)
+        public FakeChunkingService(int chunkSize = 1100, int chunkOverlap = 150)
         {
             _chunkSize = chunkSize;
             _chunkOverlap = chunkOverlap;
         }
 
-        public Task<SystemSettingDto> GetCurrentAsync(CancellationToken cancellationToken = default)
+        public Task<SystemSettingDto> GetCurrentChunkSettingAsync(CancellationToken cancellationToken = default)
         {
             return Task.FromResult(new SystemSettingDto
             {
@@ -245,9 +329,37 @@ public class DocumentServiceTests
             });
         }
 
-        public Task UpdateAsync(CurrentUserDto currentUser, UpdateSystemSettingDto setting, CancellationToken cancellationToken = default)
+        public async Task<IReadOnlyList<DocumentChunk>> CreateChunksAsync(int documentId, string text, CancellationToken cancellationToken = default)
         {
-            throw new NotImplementedException();
+            var setting = await GetCurrentChunkSettingAsync(cancellationToken);
+            var words = text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            var step = Math.Max(1, setting.ChunkSize - setting.ChunkOverlap);
+            var chunks = new List<DocumentChunk>();
+
+            for (var start = 0; start < words.Length; start += step)
+            {
+                var chunkWords = words.Skip(start).Take(setting.ChunkSize).ToArray();
+                if (chunkWords.Length == 0)
+                {
+                    break;
+                }
+
+                chunks.Add(new DocumentChunk
+                {
+                    DocumentId = documentId,
+                    ChunkIndex = chunks.Count,
+                    Content = string.Join(' ', chunkWords),
+                    TokenCount = chunkWords.Length,
+                    WordCount = chunkWords.Length
+                });
+
+                if (start + chunkWords.Length >= words.Length)
+                {
+                    break;
+                }
+            }
+
+            return chunks;
         }
     }
 }

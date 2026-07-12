@@ -20,16 +20,16 @@ public class DocumentService : IDocumentService
 
     private readonly IDocumentRepository _documentRepository;
     private readonly ITeacherSubjectRepository _teacherSubjectRepository;
-    private readonly ISystemSettingService _systemSettingService;
+    private readonly IChunkingService _chunkingService;
 
     public DocumentService(
         IDocumentRepository documentRepository,
         ITeacherSubjectRepository teacherSubjectRepository,
-        ISystemSettingService systemSettingService)
+        IChunkingService chunkingService)
     {
         _documentRepository = documentRepository;
         _teacherSubjectRepository = teacherSubjectRepository;
-        _systemSettingService = systemSettingService;
+        _chunkingService = chunkingService;
     }
 
     public async Task<IReadOnlyList<DocumentDto>> GetDocumentsForAdminAsync(CurrentUserDto currentUser, CancellationToken cancellationToken = default)
@@ -92,7 +92,10 @@ public class DocumentService : IDocumentService
             return ToDto(document);
         }
 
-        if (currentUser.Role == UserRole.Student && document.Status == DocumentStatus.Indexed && !document.IsArchived)
+        if (currentUser.Role == UserRole.Student
+            && document.Status == DocumentStatus.Indexed
+            && !document.IsArchived
+            && document.Subject?.IsActive == true)
         {
             return ToDto(document);
         }
@@ -143,6 +146,8 @@ public class DocumentService : IDocumentService
             throw new UnauthorizedAccessException("Teachers can only upload documents to assigned Subjects.");
         }
 
+        await ValidateChapterForTeacherSubjectAsync(currentUser, document.SubjectId, document.ChapterId, cancellationToken);
+
         var extension = Path.GetExtension(document.FileName);
         if (!AllowedExtensions.Contains(extension))
         {
@@ -185,8 +190,7 @@ public class DocumentService : IDocumentService
         {
             await File.WriteAllBytesAsync(filePath, document.FileContent, cancellationToken);
             var extractedText = ExtractText(document.FileContent, extension);
-            var setting = await _systemSettingService.GetCurrentAsync(cancellationToken);
-            var chunks = CreateChunks(entity.Id, extractedText, setting);
+            var chunks = await _chunkingService.CreateChunksAsync(entity.Id, extractedText, cancellationToken);
 
             entity.Chunks.Clear();
             foreach (var chunk in chunks)
@@ -213,7 +217,9 @@ public class DocumentService : IDocumentService
     public async Task UpdateDocumentAsync(CurrentUserDto currentUser, UpdateDocumentDto document, CancellationToken cancellationToken = default)
     {
         var entity = await GetOwnedTeacherDocumentAsync(currentUser, document.Id, cancellationToken);
+        await ValidateChapterForTeacherSubjectAsync(currentUser, document.SubjectId, document.ChapterId, cancellationToken);
 
+        entity.SubjectId = document.SubjectId;
         entity.Title = document.Title;
         entity.Description = document.Description;
         entity.ChapterId = document.ChapterId;
@@ -225,6 +231,11 @@ public class DocumentService : IDocumentService
     public async Task ArchiveDocumentAsync(CurrentUserDto currentUser, int documentId, CancellationToken cancellationToken = default)
     {
         var document = await GetOwnedTeacherDocumentAsync(currentUser, documentId, cancellationToken);
+
+        if (document.IsArchived)
+        {
+            return;
+        }
 
         document.IsArchived = true;
         document.Status = DocumentStatus.Archived;
@@ -239,11 +250,42 @@ public class DocumentService : IDocumentService
     {
         var document = await GetOwnedTeacherDocumentAsync(currentUser, documentId, cancellationToken);
 
+        if (document.IsArchived)
+        {
+            throw new InvalidOperationException("Archived documents cannot be re-indexed.");
+        }
+
+        var now = DateTime.UtcNow;
         document.Status = DocumentStatus.Processing;
         document.ErrorMessage = null;
-        document.UpdatedAt = DateTime.UtcNow;
+        document.UpdatedAt = now;
 
-        await _documentRepository.UpdateAsync(document, cancellationToken);
+        try
+        {
+            if (!File.Exists(document.FilePath))
+            {
+                throw new FileNotFoundException("The stored document file could not be found.", document.FilePath);
+            }
+
+            var content = await File.ReadAllBytesAsync(document.FilePath, cancellationToken);
+            var extension = Path.GetExtension(document.OriginalFileName);
+            var extractedText = ExtractText(content, extension);
+            var chunks = await _chunkingService.CreateChunksAsync(document.Id, extractedText, cancellationToken);
+
+            document.Status = DocumentStatus.Indexed;
+            document.ErrorMessage = null;
+            document.UpdatedAt = DateTime.UtcNow;
+
+            await _documentRepository.ReplaceChunksInTransactionAsync(document, chunks, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            document.Status = DocumentStatus.Failed;
+            document.ErrorMessage = ex.Message;
+            document.UpdatedAt = DateTime.UtcNow;
+
+            await _documentRepository.UpdateAsync(document, cancellationToken);
+        }
     }
 
     public Task<IReadOnlyList<DocumentDto>> GetDocumentsForAdminAsync(CancellationToken cancellationToken = default)
@@ -271,6 +313,30 @@ public class DocumentService : IDocumentService
         return document;
     }
 
+    private async Task ValidateChapterForTeacherSubjectAsync(
+        CurrentUserDto currentUser,
+        int subjectId,
+        int? chapterId,
+        CancellationToken cancellationToken)
+    {
+        AuthorizationGuard.RequireRole(currentUser, UserRole.Teacher);
+
+        var assignments = await _teacherSubjectRepository.GetByTeacherAsync(currentUser.UserId, cancellationToken);
+        var assignedSubject = assignments
+            .Select(assignment => assignment.Subject)
+            .FirstOrDefault(subject => subject?.Id == subjectId && subject.IsActive);
+
+        if (assignedSubject is null)
+        {
+            throw new UnauthorizedAccessException("Teachers can only use assigned active Subjects.");
+        }
+
+        if (chapterId.HasValue && assignedSubject.Chapters.All(chapter => chapter.Id != chapterId.Value))
+        {
+            throw new InvalidOperationException("Selected Chapter does not belong to the selected Subject.");
+        }
+    }
+
     private static DocumentDto ToDto(Document document)
     {
         return new DocumentDto
@@ -284,13 +350,19 @@ public class DocumentService : IDocumentService
             ChapterId = document.ChapterId,
             ChapterName = document.Chapter?.Name ?? string.Empty,
             Title = document.Title,
+            Description = document.Description,
             FileName = document.OriginalFileName,
             FilePath = document.FilePath,
+            ContentType = document.ContentType,
             FileSize = document.FileSize,
             Status = document.Status.ToString(),
             ChunkCount = document.Chunks.Count,
             IsArchived = document.IsArchived,
-            UploadedAtUtc = document.UploadedAt
+            UploadedAtUtc = document.UploadedAt,
+            UpdatedAtUtc = document.UpdatedAt,
+            ArchivedAtUtc = document.ArchivedAt,
+            ArchivedByTeacherId = document.ArchivedByTeacherId,
+            ErrorMessage = document.ErrorMessage
         };
     }
 
@@ -346,79 +418,4 @@ public class DocumentService : IDocumentService
         return text;
     }
 
-    private static IReadOnlyList<DocumentChunk> CreateChunks(int documentId, string text, SystemSettingDto setting)
-    {
-        return setting.ChunkStrategy switch
-        {
-            ChunkStrategy.Paragraph => CreateParagraphChunks(documentId, text, setting),
-            ChunkStrategy.Hybrid => CreateParagraphChunks(documentId, text, setting),
-            _ => CreateFixedSizeChunks(documentId, text, setting)
-        };
-    }
-
-    private static IReadOnlyList<DocumentChunk> CreateFixedSizeChunks(int documentId, string text, SystemSettingDto setting)
-    {
-        var words = text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        var chunkSize = Math.Max(1, setting.ChunkSize);
-        var overlap = Math.Clamp(setting.ChunkOverlap, 0, Math.Max(0, chunkSize - 1));
-        var step = Math.Max(1, chunkSize - overlap);
-        var chunks = new List<DocumentChunk>();
-
-        for (var start = 0; start < words.Length; start += step)
-        {
-            var chunkWords = words.Skip(start).Take(chunkSize).ToArray();
-            if (chunkWords.Length == 0)
-            {
-                break;
-            }
-
-            chunks.Add(CreateChunk(documentId, chunks.Count, string.Join(' ', chunkWords), start, start + chunkWords.Length));
-
-            if (start + chunkWords.Length >= words.Length)
-            {
-                break;
-            }
-        }
-
-        return chunks;
-    }
-
-    private static IReadOnlyList<DocumentChunk> CreateParagraphChunks(int documentId, string text, SystemSettingDto setting)
-    {
-        var paragraphs = text.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        if (paragraphs.Length <= 1)
-        {
-            return CreateFixedSizeChunks(documentId, text, setting);
-        }
-
-        var chunks = new List<DocumentChunk>();
-        foreach (var paragraph in paragraphs)
-        {
-            chunks.AddRange(CreateFixedSizeChunks(documentId, paragraph, setting)
-                .Select(chunk =>
-                {
-                    chunk.ChunkIndex = chunks.Count;
-                    return chunk;
-                }));
-        }
-
-        return chunks;
-    }
-
-    private static DocumentChunk CreateChunk(int documentId, int index, string content, int startPosition, int endPosition)
-    {
-        var tokenCount = content.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
-
-        return new DocumentChunk
-        {
-            DocumentId = documentId,
-            ChunkIndex = index,
-            Content = content,
-            StartPosition = startPosition,
-            EndPosition = endPosition,
-            WordCount = tokenCount,
-            TokenCount = tokenCount,
-            CreatedAt = DateTime.UtcNow
-        };
-    }
 }

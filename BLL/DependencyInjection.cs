@@ -18,7 +18,8 @@ public static class DependencyInjection
         services.AddScoped<ITeacherAssignmentService, TeacherAssignmentService>();
         services.AddScoped<ISystemSettingService, SystemSettingService>();
         services.AddScoped<IChunkingService, ChunkingService>();
-        services.AddScoped<IChunkConfigurationService, ChunkingService>();
+        services.AddScoped<IChunkConfigurationService, SystemSettingService>();
+        services.AddScoped<IAiCostEstimator, AiCostEstimator>();
         services.AddScoped<IAiUsageService, AiUsageService>();
         services.AddScoped<ITokenUsageStatisticsService, TokenUsageStatisticsService>();
 
