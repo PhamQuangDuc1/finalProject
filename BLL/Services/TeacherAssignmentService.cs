@@ -61,6 +61,20 @@ public class TeacherAssignmentService : ITeacherAssignmentService
             }).ToList();
     }
 
+    public async Task<IReadOnlyList<SubjectOptionDto>> GetSubjectOptionsForTeacherAsync(int teacherId, CancellationToken cancellationToken = default)
+    {
+        var assignments = await _teacherSubjectRepository.GetByTeacherAsync(teacherId, cancellationToken);
+
+        return assignments
+            .Where(assignment => assignment.Subject?.IsActive == true)
+            .Select(assignment => new SubjectOptionDto
+            {
+                Id = assignment.SubjectId,
+                DisplayName = $"{assignment.Subject!.Code} - {assignment.Subject.Name}"
+            })
+            .ToList();
+    }
+
     public Task AssignTeacherToSubjectAsync(CurrentUserDto currentUser, int teacherId, int subjectId, CancellationToken cancellationToken = default)
     {
         return _subjectService.AssignTeacherToSubjectAsync(currentUser, teacherId, subjectId, cancellationToken);

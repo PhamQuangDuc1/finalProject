@@ -25,6 +25,18 @@ public class TeacherSubjectRepository : ITeacherSubjectRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<TeacherSubject>> GetByTeacherAsync(int teacherId, CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.TeacherSubjects
+            .Include(assignment => assignment.Subject)
+                .ThenInclude(subject => subject!.Department)
+            .Include(assignment => assignment.Subject)
+                .ThenInclude(subject => subject!.Chapters)
+            .Where(assignment => assignment.TeacherId == teacherId)
+            .OrderBy(assignment => assignment.Subject!.Name)
+            .ToListAsync(cancellationToken);
+    }
+
     public Task<bool> ExistsAsync(int teacherId, int subjectId, CancellationToken cancellationToken = default)
     {
         return _dbContext.TeacherSubjects.AnyAsync(

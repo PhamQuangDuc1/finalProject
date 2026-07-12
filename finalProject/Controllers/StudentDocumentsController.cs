@@ -8,33 +8,49 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace finalProject.Controllers;
 
-[Authorize(Roles = StudyMateRoles.Admin)]
-public class DocumentsController : Controller
+[Authorize(Roles = StudyMateRoles.Student)]
+public class StudentDocumentsController : Controller
 {
     private readonly IDocumentService _documentService;
 
-    public DocumentsController(IDocumentService documentService)
+    public StudentDocumentsController(IDocumentService documentService)
     {
         _documentService = documentService;
     }
 
     public async Task<IActionResult> Index(CancellationToken cancellationToken)
     {
-        var documents = await _documentService.GetDocumentsForAdminAsync(GetCurrentUser(), cancellationToken);
+        var documents = await _documentService.GetDocumentsForStudentAsync(GetCurrentUser(), cancellationToken);
 
         return View(documents);
     }
 
     public async Task<IActionResult> ViewDocument(int id, CancellationToken cancellationToken)
     {
-        var document = await _documentService.GetDocumentByIdAsync(GetCurrentUser(), id, cancellationToken);
+        DocumentDto? document;
+        try
+        {
+            document = await _documentService.GetDocumentByIdAsync(GetCurrentUser(), id, cancellationToken);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
 
-        return document is null ? NotFound() : Content($"{document.Title}\n{document.SubjectName}\n{document.UploadedByTeacherName}", "text/plain");
+        return document is null ? NotFound() : Content($"{document.Title}\n{document.SubjectName}", "text/plain");
     }
 
     public async Task<IActionResult> Download(int id, CancellationToken cancellationToken)
     {
-        var document = await _documentService.GetDocumentByIdAsync(GetCurrentUser(), id, cancellationToken);
+        DocumentDto? document;
+        try
+        {
+            document = await _documentService.GetDocumentByIdAsync(GetCurrentUser(), id, cancellationToken);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
 
         if (document is null)
         {
@@ -57,7 +73,7 @@ public class DocumentsController : Controller
         return new CurrentUserDto
         {
             UserId = int.TryParse(userIdValue, out var userId) ? userId : 0,
-            Role = UserRole.Admin
+            Role = UserRole.Student
         };
     }
 }

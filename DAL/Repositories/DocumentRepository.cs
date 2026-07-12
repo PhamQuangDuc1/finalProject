@@ -18,7 +18,10 @@ public class DocumentRepository : IDocumentRepository
     {
         return await _dbContext.Documents
             .Include(document => document.Subject)
+                .ThenInclude(subject => subject!.Department)
             .Include(document => document.UploadedByTeacher)
+            .Include(document => document.Chapter)
+            .Include(document => document.Chunks)
             .OrderByDescending(document => document.UploadedAt)
             .ToListAsync(cancellationToken);
     }
@@ -27,6 +30,9 @@ public class DocumentRepository : IDocumentRepository
     {
         return await _dbContext.Documents
             .Include(document => document.Subject)
+                .ThenInclude(subject => subject!.Department)
+            .Include(document => document.UploadedByTeacher)
+            .Include(document => document.Chapter)
             .Where(document => document.UploadedByTeacherId == teacherId)
             .Include(document => document.Chunks)
             .OrderByDescending(document => document.UploadedAt)
@@ -37,7 +43,10 @@ public class DocumentRepository : IDocumentRepository
     {
         return await _dbContext.Documents
             .Include(document => document.Subject)
+                .ThenInclude(subject => subject!.Department)
             .Include(document => document.UploadedByTeacher)
+            .Include(document => document.Chapter)
+            .Include(document => document.Chunks)
             .Where(document => document.Status == DocumentStatus.Indexed
                 && !document.IsArchived
                 && document.Subject != null
@@ -50,7 +59,9 @@ public class DocumentRepository : IDocumentRepository
     {
         return await _dbContext.Documents
             .Include(document => document.Subject)
+                .ThenInclude(subject => subject!.Department)
             .Include(document => document.UploadedByTeacher)
+            .Include(document => document.Chapter)
             .Include(document => document.Chunks)
             .FirstOrDefaultAsync(document => document.Id == id, cancellationToken);
     }

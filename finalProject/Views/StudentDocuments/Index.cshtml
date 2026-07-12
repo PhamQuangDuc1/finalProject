@@ -1,13 +1,13 @@
 @model IReadOnlyList<BLL.DTOs.DocumentDto>
 
 @{
-    ViewData["Title"] = "Quản lý tài liệu";
+    ViewData["Title"] = "Tài liệu học tập";
 }
 
 <div class="d-flex align-items-center justify-content-between mb-3">
     <div>
-        <h1 class="h3 mb-1">Quản lý tài liệu</h1>
-        <p class="text-muted mb-0">Admin chỉ xem tổng quan, không upload, sửa, archive hoặc re-index tài liệu.</p>
+        <h1 class="h3 mb-1">Tài liệu học tập</h1>
+        <p class="text-muted mb-0">Chỉ hiển thị tài liệu đã index, môn học đang hoạt động và chưa archive.</p>
     </div>
 </div>
 
@@ -24,10 +24,7 @@
                     <th>Tiêu đề</th>
                     <th>Môn học</th>
                     <th>Bộ môn</th>
-                    <th>Người upload</th>
                     <th>Ngày upload</th>
-                    <th>Trạng thái</th>
-                    <th>Số chunk</th>
                     <th>Thao tác</th>
                 </tr>
             </thead>
@@ -35,7 +32,7 @@
             @if (Model.Count == 0)
             {
                 <tr>
-                    <td colspan="8" class="text-muted">Chưa có tài liệu nào được đăng ký.</td>
+                    <td colspan="5" class="text-muted">Chưa có tài liệu học tập khả dụng.</td>
                 </tr>
             }
             else
@@ -46,10 +43,7 @@
                         <td>@document.Title</td>
                         <td>@document.SubjectName</td>
                         <td>@document.DepartmentName</td>
-                        <td>@document.UploadedByTeacherName</td>
                         <td>@document.UploadedAtUtc.ToLocalTime().ToString("g")</td>
-                        <td>@document.Status</td>
-                        <td>@document.ChunkCount</td>
                         <td>
                             <div class="btn-group btn-group-sm" role="group">
                                 <a class="btn btn-outline-primary" asp-action="ViewDocument" asp-route-id="@document.Id">Xem</a>
