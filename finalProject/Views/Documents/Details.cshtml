@@ -32,7 +32,9 @@
     </div>
 </section>
 
-<section class="card-panel">
+<section class="card-panel mb-4">
     <h2 class="section-title">Mô tả</h2>
     <p class="mb-0">@(string.IsNullOrWhiteSpace(Model.Description) ? "Chưa có mô tả." : Model.Description)</p>
 </section>
+
+<partial name="_DocumentChunks" model="Model" />

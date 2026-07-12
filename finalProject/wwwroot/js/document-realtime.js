@@ -1,5 +1,5 @@
 (function () {
-    const realtimeRoot = document.querySelector("[data-document-realtime]");
+    const realtimeRoot = document.querySelector("[data-document-realtime], [data-document-detail-id]");
     if (!realtimeRoot) {
         return;
     }
@@ -8,6 +8,8 @@
     const statusBadge = document.getElementById("documentRealtimeStatus");
     const notificationsBody = document.getElementById("documentRealtimeNotifications");
     const mode = realtimeRoot.getAttribute("data-document-realtime");
+    const detailDocumentId = Number(realtimeRoot.getAttribute("data-document-detail-id") || 0);
+    const detailAlert = document.querySelector("[data-document-detail-alert]");
     const eventNames = ["DocumentCreated", "DocumentUpdated", "DocumentArchived", "DocumentReindexed"];
 
     function setStatus(text, cssClass) {
@@ -129,6 +131,25 @@
         }, 2400);
     }
 
+    function updateDetailPage(eventName, payload) {
+        if (!detailDocumentId || Number(payload.documentId) !== detailDocumentId) {
+            return;
+        }
+
+        if (detailAlert) {
+            detailAlert.textContent = eventName === "DocumentReindexed"
+                ? "Tai lieu vua duoc re-index. Trang se tai lai de cap nhat noi dung chunk."
+                : `Tai lieu vua duoc cap nhat: ${payload.action || eventName}.`;
+            detailAlert.classList.remove("d-none");
+        }
+
+        if (eventName === "DocumentReindexed") {
+            window.setTimeout(function () {
+                window.location.reload();
+            }, 1200);
+        }
+    }
+
     function handleInvocation(message) {
         if (message.type !== 1 || !eventNames.includes(message.target)) {
             return;
@@ -141,6 +162,7 @@
 
         prependNotification(payload);
         updateDocumentRow(payload);
+        updateDetailPage(message.target, payload);
     }
 
     function connectWebSocket(connectionToken) {

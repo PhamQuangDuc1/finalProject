@@ -1,6 +1,7 @@
 @model BLL.DTOs.DocumentDto
 
 @{
+    var minimumArchiveAt = DateTime.Now.AddDays(7).ToString("yyyy-MM-ddTHH:mm");
     ViewData["Title"] = "Chi tiết tài liệu";
 }
 
@@ -70,6 +71,13 @@
                 <div class="fw-semibold">@Model.ArchivedAtUtc.Value.ToLocalTime().ToString("g")</div>
             </div>
         }
+        @if (Model.ScheduledArchiveAtUtc.HasValue && !Model.IsArchived)
+        {
+            <div class="col-md-6">
+                <div class="text-muted">Lich an</div>
+                <div class="fw-semibold">@Model.ScheduledArchiveAtUtc.Value.ToLocalTime().ToString("g")</div>
+            </div>
+        }
     </div>
 </section>
 
@@ -77,6 +85,8 @@
     <h2 class="section-title">Mô tả</h2>
     <p class="mb-0">@(string.IsNullOrWhiteSpace(Model.Description) ? "Chưa có mô tả." : Model.Description)</p>
 </section>
+
+<partial name="_DocumentChunks" model="Model" />
 
 @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
 {
@@ -89,8 +99,12 @@
 <section class="card-panel">
     <h2 class="section-title">Thao tác</h2>
     <div class="d-flex flex-wrap gap-2">
-        <form asp-action="Archive" asp-route-id="@Model.Id" method="post">
-            <button type="submit" class="btn btn-outline-warning" disabled="@Model.IsArchived">Archive</button>
+        <form asp-action="Archive" asp-route-id="@Model.Id" method="post" class="d-flex flex-wrap gap-2 align-items-end">
+            <div>
+                <label for="scheduledArchiveAt" class="form-label mb-1">An sau ngay</label>
+                <input id="scheduledArchiveAt" name="scheduledArchiveAt" type="datetime-local" class="form-control" min="@minimumArchiveAt" required disabled="@Model.IsArchived" />
+            </div>
+            <button type="submit" class="btn btn-outline-warning" disabled="@Model.IsArchived">Len lich an</button>
         </form>
         <form asp-action="Reindex" asp-route-id="@Model.Id" method="post">
             <button type="submit" class="btn btn-outline-secondary" disabled="@Model.IsArchived">Re-index</button>

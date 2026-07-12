@@ -20,7 +20,7 @@ public interface IDocumentService
 
     Task UpdateDocumentAsync(CurrentUserDto currentUser, UpdateDocumentDto document, CancellationToken cancellationToken = default);
 
-    Task ArchiveDocumentAsync(CurrentUserDto currentUser, int documentId, CancellationToken cancellationToken = default);
+    Task ArchiveDocumentAsync(CurrentUserDto currentUser, int documentId, DateTime scheduledArchiveAtUtc, CancellationToken cancellationToken = default);
 
     Task ReindexDocumentAsync(CurrentUserDto currentUser, int documentId, CancellationToken cancellationToken = default);
 

@@ -218,21 +218,26 @@ public class TeacherDocumentsController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Archive(int id, CancellationToken cancellationToken)
+    public async Task<IActionResult> Archive(int id, DateTime scheduledArchiveAt, CancellationToken cancellationToken)
     {
         var currentUser = GetCurrentUser();
         try
         {
-            await _documentService.ArchiveDocumentAsync(currentUser, id, cancellationToken);
+            await _documentService.ArchiveDocumentAsync(currentUser, id, scheduledArchiveAt.ToUniversalTime(), cancellationToken);
         }
         catch (UnauthorizedAccessException)
         {
             return Forbid();
         }
+        catch (InvalidOperationException ex)
+        {
+            TempData["StatusMessage"] = ex.Message;
+            return RedirectToAction(nameof(Details), new { id });
+        }
 
-        await BroadcastDocumentEventAsync("DocumentArchived", "Archived", id, currentUser, cancellationToken);
+        await BroadcastDocumentEventAsync("DocumentUpdated", "Archive scheduled", id, currentUser, cancellationToken);
 
-        TempData["StatusMessage"] = "Da archive tai lieu.";
+        TempData["StatusMessage"] = "Da len lich an tai lieu.";
 
         return RedirectToAction(nameof(Index));
     }

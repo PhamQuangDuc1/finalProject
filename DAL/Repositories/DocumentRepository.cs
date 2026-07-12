@@ -49,6 +49,7 @@ public class DocumentRepository : IDocumentRepository
             .Include(document => document.Chunks)
             .Where(document => document.Status == DocumentStatus.Indexed
                 && !document.IsArchived
+                && (!document.ScheduledArchiveAt.HasValue || document.ScheduledArchiveAt > DateTime.UtcNow)
                 && document.Subject != null
                 && document.Subject.IsActive)
             .OrderByDescending(document => document.UploadedAt)

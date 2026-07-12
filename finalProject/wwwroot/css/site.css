@@ -263,6 +263,60 @@ a {
   padding: 6px 10px;
 }
 
+.chunk-list {
+  display: grid;
+  gap: 14px;
+}
+
+.chunk-item {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.chunk-meta {
+  align-items: center;
+  background: #F8FAFC;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 10px 12px;
+}
+
+.chunk-meta span {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.chunk-content {
+  background: #FFFFFF;
+  color: var(--text);
+  margin: 0;
+  max-height: 320px;
+  overflow: auto;
+  padding: 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.ai-answer {
+  background: #F8FAFC;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px;
+}
+
+.archive-warning {
+  display: grid;
+  gap: 4px;
+}
+
+.archive-warning small {
+  color: #92400E;
+  line-height: 1.3;
+}
+
 .form-floating > .form-control-plaintext::placeholder,
 .form-floating > .form-control::placeholder {
   color: var(--bs-secondary-color);

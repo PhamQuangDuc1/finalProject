@@ -36,6 +36,10 @@ public class Document
 
     public int? ArchivedByTeacherId { get; set; }
 
+    public DateTime? ScheduledArchiveAt { get; set; }
+
+    public int? ScheduledArchiveByTeacherId { get; set; }
+
     public string? ErrorMessage { get; set; }
 
     public Subject? Subject { get; set; }
@@ -45,6 +49,8 @@ public class Document
     public User? UploadedByTeacher { get; set; }
 
     public User? ArchivedByTeacher { get; set; }
+
+    public User? ScheduledArchiveByTeacher { get; set; }
 
     public ICollection<DocumentChunk> Chunks { get; set; } = new List<DocumentChunk>();
 

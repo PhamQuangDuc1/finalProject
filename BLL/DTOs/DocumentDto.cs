@@ -34,6 +34,8 @@ public class DocumentDto
 
     public int ChunkCount { get; set; }
 
+    public IReadOnlyList<DocumentChunkDto> Chunks { get; set; } = Array.Empty<DocumentChunkDto>();
+
     public bool IsArchived { get; set; }
 
     public DateTime UploadedAtUtc { get; set; }
@@ -43,6 +45,10 @@ public class DocumentDto
     public DateTime? ArchivedAtUtc { get; set; }
 
     public int? ArchivedByTeacherId { get; set; }
+
+    public DateTime? ScheduledArchiveAtUtc { get; set; }
+
+    public int? ScheduledArchiveByTeacherId { get; set; }
 
     public string? ErrorMessage { get; set; }
 }

@@ -62,6 +62,45 @@
 
 @if (Model.Role == UserRole.Student)
 {
+    <section class="card-panel mb-4">
+        <div class="d-flex align-items-center justify-content-between gap-3 mb-3">
+            <div>
+                <h2 class="section-title mb-1">Chat AI voi tai lieu</h2>
+                <p class="text-muted mb-0">Chon tai lieu da index va hoi AI dua tren noi dung chunk.</p>
+            </div>
+        </div>
+
+        @if (Model.RecentUploads.Count == 0)
+        {
+            <p class="text-muted mb-0">Chua co tai lieu san sang de hoi AI.</p>
+        }
+        else
+        {
+            <form asp-controller="StudentDocuments" asp-action="AskAi" method="post" class="d-grid gap-3">
+                @Html.AntiForgeryToken()
+                <div class="row g-3">
+                    <div class="col-md-5">
+                        <label for="aiDocumentId" class="form-label">Tai lieu</label>
+                        <select id="aiDocumentId" name="id" class="form-select" required>
+                            @foreach (var upload in Model.RecentUploads)
+                            {
+                                <option value="@upload.Id">@upload.Title - @upload.SubjectName</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-7">
+                        <label for="aiQuestion" class="form-label">Cau hoi</label>
+                        <textarea id="aiQuestion" name="question" class="form-control" rows="3" maxlength="1000" required></textarea>
+                    </div>
+                </div>
+                <div>
+                    <button type="submit" class="btn btn-primary">Hoi AI</button>
+                    <a class="btn btn-outline-secondary" asp-controller="StudentDocuments" asp-action="Index">Mo danh sach tai lieu</a>
+                </div>
+            </form>
+        }
+    </section>
+
     <section class="dashboard-grid">
         <article class="card-panel">
             <h2 class="section-title">Tài liệu mới</h2>

@@ -35,6 +35,51 @@ public class DocumentServiceTests
     }
 
     [Fact]
+    public async Task GetDocumentByIdAsync_ReturnsChunkDetailsInIndexOrder()
+    {
+        var document = CreateDocument(1, 2, DocumentStatus.Indexed, false, "Lecture 1", 10, "PRN222", "Software Engineering", 0);
+        document.Chunks = new List<DocumentChunk>
+        {
+            new()
+            {
+                Id = 11,
+                ChunkIndex = 1,
+                Content = "second chunk",
+                StartPosition = 10,
+                EndPosition = 22,
+                TokenCount = 2,
+                WordCount = 2,
+                CreatedAt = DateTime.UtcNow
+            },
+            new()
+            {
+                Id = 10,
+                ChunkIndex = 0,
+                Content = "first chunk",
+                StartPosition = 0,
+                EndPosition = 9,
+                TokenCount = 2,
+                WordCount = 2,
+                CreatedAt = DateTime.UtcNow
+            }
+        };
+        var service = new DocumentService(new FakeDocumentRepository(new[] { document }), new FakeTeacherSubjectRepository(), new FakeChunkingService());
+
+        var result = await service.GetDocumentByIdAsync(new CurrentUserDto { UserId = 2, Role = UserRole.Teacher }, document.Id);
+
+        Assert.NotNull(result);
+        var chunksProperty = typeof(DocumentDto).GetProperty("Chunks");
+        Assert.NotNull(chunksProperty);
+        var chunks = Assert.IsAssignableFrom<IEnumerable<object>>(chunksProperty.GetValue(result));
+        var chunkList = chunks.ToList();
+        Assert.Equal(2, chunkList.Count);
+        Assert.Equal(0, GetIntProperty(chunkList[0], "ChunkIndex"));
+        Assert.Equal("first chunk", GetStringProperty(chunkList[0], "Content"));
+        Assert.Equal(1, GetIntProperty(chunkList[1], "ChunkIndex"));
+        Assert.Equal("second chunk", GetStringProperty(chunkList[1], "Content"));
+    }
+
+    [Fact]
     public async Task GetDocumentsForTeacherAsync_AppliesTeacherFiltersInService()
     {
         var documents = new[]
@@ -122,6 +167,18 @@ public class DocumentServiceTests
     }
 
     [Fact]
+    public async Task GetDocumentsForStudentAsync_IncludesScheduledArchiveWarningData()
+    {
+        var document = CreateDocument(1, 2, DocumentStatus.Indexed, false, "Scheduled", 10, "PRN222", "Software Engineering", 1);
+        document.ScheduledArchiveAt = DateTime.UtcNow.AddDays(8);
+        var service = new DocumentService(new FakeDocumentRepository(new[] { document }), new FakeTeacherSubjectRepository(), new FakeChunkingService());
+
+        var result = await service.GetDocumentsForStudentAsync(new CurrentUserDto { UserId = 4, Role = UserRole.Student });
+
+        Assert.Equal(document.ScheduledArchiveAt, Assert.Single(result).ScheduledArchiveAtUtc);
+    }
+
+    [Fact]
     public async Task UpdateDocumentAsync_Throws_WhenTeacherSelectsUnassignedSubject()
     {
         var document = CreateDocument(1, 2, DocumentStatus.Indexed, false, "Owned", 10, "PRN222", "Software Engineering", 1);
@@ -162,6 +219,36 @@ public class DocumentServiceTests
         Assert.All(document.Chunks, chunk => Assert.True(chunk.TokenCount <= 3));
     }
 
+    [Fact]
+    public async Task ArchiveDocumentAsync_Throws_WhenScheduledTimeIsLessThanSevenDaysAway()
+    {
+        var document = CreateDocument(1, 2, DocumentStatus.Indexed, false, "Owned", 10, "PRN222", "Software Engineering", 1);
+        var service = new DocumentService(new FakeDocumentRepository(new[] { document }), new FakeTeacherSubjectRepository(), new FakeChunkingService());
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.ArchiveDocumentAsync(
+            new CurrentUserDto { UserId = 2, Role = UserRole.Teacher },
+            document.Id,
+            DateTime.UtcNow.AddDays(6)));
+    }
+
+    [Fact]
+    public async Task ArchiveDocumentAsync_SchedulesArchive_WhenScheduledTimeIsAtLeastSevenDaysAway()
+    {
+        var document = CreateDocument(1, 2, DocumentStatus.Indexed, false, "Owned", 10, "PRN222", "Software Engineering", 1);
+        var service = new DocumentService(new FakeDocumentRepository(new[] { document }), new FakeTeacherSubjectRepository(), new FakeChunkingService());
+        var scheduledAt = DateTime.UtcNow.AddDays(8);
+
+        await service.ArchiveDocumentAsync(
+            new CurrentUserDto { UserId = 2, Role = UserRole.Teacher },
+            document.Id,
+            scheduledAt);
+
+        Assert.False(document.IsArchived);
+        Assert.Equal(DocumentStatus.Indexed, document.Status);
+        Assert.Equal(scheduledAt, document.ScheduledArchiveAt);
+        Assert.Equal(2, document.ScheduledArchiveByTeacherId);
+    }
+
     private static Document CreateDocument(
         int id,
         int teacherId,
@@ -195,6 +282,22 @@ public class DocumentServiceTests
                 .Select(index => new DocumentChunk { Id = index, ChunkIndex = index - 1 })
                 .ToList()
         };
+    }
+
+    private static int GetIntProperty(object value, string propertyName)
+    {
+        var property = value.GetType().GetProperty(propertyName);
+        Assert.NotNull(property);
+
+        return Assert.IsType<int>(property.GetValue(value));
+    }
+
+    private static string GetStringProperty(object value, string propertyName)
+    {
+        var property = value.GetType().GetProperty(propertyName);
+        Assert.NotNull(property);
+
+        return Assert.IsType<string>(property.GetValue(value));
     }
 
     private sealed class FakeDocumentRepository : IDocumentRepository

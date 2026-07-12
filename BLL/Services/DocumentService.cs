@@ -11,6 +11,8 @@ namespace BLL.Services;
 
 public class DocumentService : IDocumentService
 {
+    private const int MinimumArchiveDelayDays = 7;
+
     private static readonly HashSet<string> AllowedExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
         ".pdf",
@@ -37,6 +39,7 @@ public class DocumentService : IDocumentService
         AuthorizationGuard.RequireRole(currentUser, UserRole.Admin);
 
         var documents = await _documentRepository.GetAllForAdminAsync(cancellationToken);
+        await ApplyDueScheduledArchivesAsync(documents, cancellationToken);
 
         return documents.Select(ToDto).ToList();
     }
@@ -51,6 +54,7 @@ public class DocumentService : IDocumentService
         AuthorizationGuard.RequireRole(currentUser, UserRole.Teacher);
 
         var documents = await _documentRepository.GetByTeacherAsync(currentUser.UserId, cancellationToken);
+        await ApplyDueScheduledArchivesAsync(documents, cancellationToken);
 
         return documents
             .Where(document => !filter.SubjectId.HasValue || document.SubjectId == filter.SubjectId.Value)
@@ -69,8 +73,12 @@ public class DocumentService : IDocumentService
         AuthorizationGuard.RequireRole(currentUser, UserRole.Student);
 
         var documents = await _documentRepository.GetIndexedActiveAsync(cancellationToken);
+        await ApplyDueScheduledArchivesAsync(documents, cancellationToken);
 
-        return documents.Select(ToDto).ToList();
+        return documents
+            .Where(document => !IsScheduledArchiveDue(document))
+            .Select(ToDto)
+            .ToList();
     }
 
     public async Task<DocumentDto?> GetDocumentByIdAsync(CurrentUserDto currentUser, int documentId, CancellationToken cancellationToken = default)
@@ -81,6 +89,8 @@ public class DocumentService : IDocumentService
         {
             return null;
         }
+
+        await ApplyDueScheduledArchivesAsync(new[] { document }, cancellationToken);
 
         if (currentUser.Role == UserRole.Admin)
         {
@@ -228,7 +238,11 @@ public class DocumentService : IDocumentService
         await _documentRepository.UpdateAsync(entity, cancellationToken);
     }
 
-    public async Task ArchiveDocumentAsync(CurrentUserDto currentUser, int documentId, CancellationToken cancellationToken = default)
+    public async Task ArchiveDocumentAsync(
+        CurrentUserDto currentUser,
+        int documentId,
+        DateTime scheduledArchiveAtUtc,
+        CancellationToken cancellationToken = default)
     {
         var document = await GetOwnedTeacherDocumentAsync(currentUser, documentId, cancellationToken);
 
@@ -237,10 +251,14 @@ public class DocumentService : IDocumentService
             return;
         }
 
-        document.IsArchived = true;
-        document.Status = DocumentStatus.Archived;
-        document.ArchivedAt = DateTime.UtcNow;
-        document.ArchivedByTeacherId = currentUser.UserId;
+        var minimumArchiveAt = DateTime.UtcNow.AddDays(MinimumArchiveDelayDays);
+        if (scheduledArchiveAtUtc < minimumArchiveAt)
+        {
+            throw new InvalidOperationException("Thoi gian an tai lieu phai cach hien tai it nhat 7 ngay.");
+        }
+
+        document.ScheduledArchiveAt = scheduledArchiveAtUtc;
+        document.ScheduledArchiveByTeacherId = currentUser.UserId;
         document.UpdatedAt = DateTime.UtcNow;
 
         await _documentRepository.UpdateAsync(document, cancellationToken);
@@ -357,13 +375,53 @@ public class DocumentService : IDocumentService
             FileSize = document.FileSize,
             Status = document.Status.ToString(),
             ChunkCount = document.Chunks.Count,
+            Chunks = document.Chunks
+                .OrderBy(chunk => chunk.ChunkIndex)
+                .Select(chunk => new DocumentChunkDto
+                {
+                    Id = chunk.Id,
+                    ChunkIndex = chunk.ChunkIndex,
+                    Content = chunk.Content,
+                    StartPosition = chunk.StartPosition,
+                    EndPosition = chunk.EndPosition,
+                    WordCount = chunk.WordCount,
+                    TokenCount = chunk.TokenCount,
+                    CreatedAtUtc = chunk.CreatedAt
+                })
+                .ToList(),
             IsArchived = document.IsArchived,
             UploadedAtUtc = document.UploadedAt,
             UpdatedAtUtc = document.UpdatedAt,
             ArchivedAtUtc = document.ArchivedAt,
             ArchivedByTeacherId = document.ArchivedByTeacherId,
+            ScheduledArchiveAtUtc = document.ScheduledArchiveAt,
+            ScheduledArchiveByTeacherId = document.ScheduledArchiveByTeacherId,
             ErrorMessage = document.ErrorMessage
         };
+    }
+
+    private async Task ApplyDueScheduledArchivesAsync(IReadOnlyList<Document> documents, CancellationToken cancellationToken)
+    {
+        var dueDocuments = documents
+            .Where(IsScheduledArchiveDue)
+            .ToList();
+
+        foreach (var document in dueDocuments)
+        {
+            document.IsArchived = true;
+            document.Status = DocumentStatus.Archived;
+            document.ArchivedAt = document.ScheduledArchiveAt;
+            document.ArchivedByTeacherId = document.ScheduledArchiveByTeacherId;
+            document.UpdatedAt = DateTime.UtcNow;
+            await _documentRepository.UpdateAsync(document, cancellationToken);
+        }
+    }
+
+    private static bool IsScheduledArchiveDue(Document document)
+    {
+        return !document.IsArchived
+            && document.ScheduledArchiveAt.HasValue
+            && document.ScheduledArchiveAt.Value <= DateTime.UtcNow;
     }
 
     private static string ExtractText(byte[] content, string extension)

@@ -24,6 +24,8 @@ public class User
 
     public ICollection<Document> ArchivedDocuments { get; set; } = new List<Document>();
 
+    public ICollection<Document> ScheduledArchiveDocuments { get; set; } = new List<Document>();
+
     public ICollection<SystemSetting> UpdatedSystemSettings { get; set; } = new List<SystemSetting>();
 
     public ICollection<AiUsageLog> AiUsageLogs { get; set; } = new List<AiUsageLog>();

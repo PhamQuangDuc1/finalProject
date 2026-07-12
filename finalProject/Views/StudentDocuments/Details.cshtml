@@ -15,6 +15,13 @@
     </div>
 </div>
 
+@if (Model.ScheduledArchiveAtUtc.HasValue)
+{
+    <div class="alert alert-warning" role="alert">
+        Tài liệu này sắp bị ẩn vào @Model.ScheduledArchiveAtUtc.Value.ToLocalTime().ToString("g"). Hãy tải xuống hoặc học trước thời điểm này nếu bạn cần.
+    </div>
+}
+
 <section class="card-panel mb-4">
     <h2 class="section-title">Thông tin tài liệu</h2>
     <div class="row g-3">
@@ -25,7 +32,44 @@
     </div>
 </section>
 
-<section class="card-panel">
+<section class="card-panel mb-4">
     <h2 class="section-title">Mô tả</h2>
     <p class="mb-0">@(string.IsNullOrWhiteSpace(Model.Description) ? "Chưa có mô tả." : Model.Description)</p>
 </section>
+
+<section class="card-panel mb-4">
+    <div class="d-flex align-items-center justify-content-between gap-3 mb-3">
+        <div>
+            <h2 class="section-title mb-1">Hoi AI ve tai lieu</h2>
+            <p class="text-muted mb-0">AI tra loi dua tren noi dung chunk cua tai lieu nay.</p>
+        </div>
+    </div>
+
+    @if (TempData["AiErrorMessage"] is string aiErrorMessage)
+    {
+        <div class="alert alert-warning" role="alert">@aiErrorMessage</div>
+    }
+
+    @if (TempData["AiAnswer"] is string aiAnswer)
+    {
+        <div class="ai-answer mb-3">
+            <div class="text-muted small mb-1">Cau hoi</div>
+            <div class="fw-semibold mb-2">@TempData["AiQuestion"]</div>
+            <div class="text-muted small mb-1">Tra loi</div>
+            <p class="mb-0">@aiAnswer</p>
+        </div>
+    }
+
+    <form asp-action="AskAi" asp-route-id="@Model.Id" method="post" class="d-grid gap-3">
+        @Html.AntiForgeryToken()
+        <div>
+            <label for="aiQuestion" class="form-label">Cau hoi</label>
+            <textarea id="aiQuestion" name="question" class="form-control" rows="3" maxlength="1000" required></textarea>
+        </div>
+        <div>
+            <button type="submit" class="btn btn-primary">Gui cau hoi</button>
+        </div>
+    </form>
+</section>
+
+<partial name="_DocumentChunks" model="Model" />

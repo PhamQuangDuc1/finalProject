@@ -217,6 +217,11 @@ public class AppDbContext : DbContext
                 .HasForeignKey(document => document.ArchivedByTeacherId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            entity.HasOne(document => document.ScheduledArchiveByTeacher)
+                .WithMany(user => user.ScheduledArchiveDocuments)
+                .HasForeignKey(document => document.ScheduledArchiveByTeacherId)
+                .OnDelete(DeleteBehavior.Restrict);
+
             entity.ToTable(table =>
             {
                 table.HasCheckConstraint(

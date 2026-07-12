@@ -129,6 +129,7 @@ public class DashboardService : IDashboardService
     {
         return new RecentUploadDto
         {
+            Id = document.Id,
             Title = document.Title,
             SubjectName = document.Subject?.Name ?? string.Empty,
             TeacherName = document.UploadedByTeacher?.FullName ?? string.Empty,

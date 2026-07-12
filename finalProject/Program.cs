@@ -20,7 +20,7 @@ builder.Services.AddStudyMateAuthorizationPolicies();
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("Connection string 'DefaultConnection' was not found.");
 
-builder.Services.AddBusinessServices(connectionString);
+builder.Services.AddBusinessServices(connectionString, builder.Configuration);
 
 var app = builder.Build();
 
