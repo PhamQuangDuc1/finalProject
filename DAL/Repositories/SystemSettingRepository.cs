@@ -17,6 +17,7 @@ public class SystemSettingRepository : ISystemSettingRepository
     public Task<SystemSetting?> GetCurrentAsync(CancellationToken cancellationToken = default)
     {
         return _dbContext.SystemSettings
+            .Include(setting => setting.UpdatedByAdmin)
             .OrderByDescending(setting => setting.UpdatedAt)
             .FirstOrDefaultAsync(cancellationToken);
     }

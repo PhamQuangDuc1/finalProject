@@ -9,4 +9,6 @@ public interface IAiUsageService
     Task<IReadOnlyList<AiUsageMonthlySummaryDto>> GetMonthlySummaryAsync(CurrentUserDto currentUser, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<AiUsageBreakdownDto>> GetSummaryByModelAndOperationAsync(CurrentUserDto currentUser, CancellationToken cancellationToken = default);
+
+    Task<AiUsageDashboardDto> GetDashboardAsync(CurrentUserDto currentUser, AiUsageDashboardFilterDto filter, CancellationToken cancellationToken = default);
 }

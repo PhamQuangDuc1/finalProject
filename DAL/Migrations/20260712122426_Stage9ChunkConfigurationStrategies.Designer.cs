@@ -4,6 +4,7 @@ using DAL.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DAL.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260712122426_Stage9ChunkConfigurationStrategies")]
+    partial class Stage9ChunkConfigurationStrategies
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -69,7 +72,7 @@ namespace DAL.Migrations
 
                     b.HasIndex("ModelName", "CreatedAt");
 
-                    b.ToTable("AiUsageLogs", null, t =>
+                    b.ToTable("AiUsageLogs", t =>
                         {
                             t.HasCheckConstraint("CK_AiUsageLogs_OperationType", "[OperationType] IN (0, 1, 2, 3)");
                         });
@@ -99,7 +102,7 @@ namespace DAL.Migrations
                     b.HasIndex("SubjectId", "OrderIndex")
                         .IsUnique();
 
-                    b.ToTable("Chapters", (string)null);
+                    b.ToTable("Chapters");
                 });
 
             modelBuilder.Entity("DAL.Entities.Department", b =>
@@ -142,7 +145,7 @@ namespace DAL.Migrations
                         .IsUnique()
                         .HasFilter("[ManagerTeacherId] IS NOT NULL");
 
-                    b.ToTable("Departments", null, t =>
+                    b.ToTable("Departments", t =>
                         {
                             t.HasTrigger("TR_Departments_ManagerTeacherRole");
                         });
@@ -242,7 +245,7 @@ namespace DAL.Migrations
 
                     b.HasIndex("SubjectId", "UploadedByTeacherId");
 
-                    b.ToTable("Documents", null, t =>
+                    b.ToTable("Documents", t =>
                         {
                             t.HasTrigger("TR_Documents_TeacherRoles");
 
@@ -290,7 +293,7 @@ namespace DAL.Migrations
                     b.HasIndex("DocumentId", "ChunkIndex")
                         .IsUnique();
 
-                    b.ToTable("DocumentChunks", (string)null);
+                    b.ToTable("DocumentChunks");
                 });
 
             modelBuilder.Entity("DAL.Entities.Subject", b =>
@@ -332,7 +335,7 @@ namespace DAL.Migrations
                     b.HasIndex("DepartmentId", "Code")
                         .IsUnique();
 
-                    b.ToTable("Subjects", (string)null);
+                    b.ToTable("Subjects");
 
                     b.HasData(
                         new
@@ -387,7 +390,7 @@ namespace DAL.Migrations
 
                     b.HasIndex("UpdatedByAdminId");
 
-                    b.ToTable("SystemSettings", null, t =>
+                    b.ToTable("SystemSettings", t =>
                         {
                             t.HasTrigger("TR_SystemSettings_AdminRole");
 
@@ -433,7 +436,7 @@ namespace DAL.Migrations
                     b.HasIndex("TeacherId", "SubjectId")
                         .IsUnique();
 
-                    b.ToTable("TeacherSubjects", null, t =>
+                    b.ToTable("TeacherSubjects", t =>
                         {
                             t.HasTrigger("TR_TeacherSubjects_TeacherRole");
                         });
@@ -493,7 +496,7 @@ namespace DAL.Migrations
                     b.HasIndex("Username")
                         .IsUnique();
 
-                    b.ToTable("Users", null, t =>
+                    b.ToTable("Users", t =>
                         {
                             t.HasCheckConstraint("CK_Users_Role", "[Role] IN (0, 1, 2)");
                         });

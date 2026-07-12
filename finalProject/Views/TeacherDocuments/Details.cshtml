@@ -1,0 +1,117 @@
+@model BLL.DTOs.DocumentDto
+
+@{
+    ViewData["Title"] = "Chi tiết tài liệu";
+}
+
+<div class="d-flex align-items-center justify-content-between mb-3">
+    <div>
+        <h1 class="h3 mb-1">@Model.Title</h1>
+        <p class="text-muted mb-0">@Model.SubjectName - @(string.IsNullOrWhiteSpace(Model.ChapterName) ? "Chưa gán chương" : Model.ChapterName)</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-outline-secondary" asp-action="Index">Quay lại</a>
+        <a class="btn btn-outline-primary" asp-action="Download" asp-route-id="@Model.Id">Tải xuống</a>
+        <a class="btn btn-primary" asp-action="Edit" asp-route-id="@Model.Id">Sửa</a>
+    </div>
+</div>
+
+@if (TempData["StatusMessage"] is string statusMessage)
+{
+    <div class="alert alert-info" role="alert">@statusMessage</div>
+}
+
+<section class="card-panel mb-4">
+    <h2 class="section-title">Thông tin tài liệu</h2>
+    <div class="row g-3">
+        <div class="col-md-6">
+            <div class="text-muted">Môn học</div>
+            <div class="fw-semibold">@Model.SubjectName</div>
+        </div>
+        <div class="col-md-6">
+            <div class="text-muted">Bộ môn</div>
+            <div class="fw-semibold">@Model.DepartmentName</div>
+        </div>
+        <div class="col-md-6">
+            <div class="text-muted">Người upload</div>
+            <div class="fw-semibold">@Model.UploadedByTeacherName</div>
+        </div>
+        <div class="col-md-6">
+            <div class="text-muted">Trạng thái</div>
+            <div class="fw-semibold">@Model.Status</div>
+        </div>
+        <div class="col-md-6">
+            <div class="text-muted">Tên tệp</div>
+            <div class="fw-semibold">@Model.FileName</div>
+        </div>
+        <div class="col-md-6">
+            <div class="text-muted">Dung lượng</div>
+            <div class="fw-semibold">@FormatBytes(Model.FileSize)</div>
+        </div>
+        <div class="col-md-6">
+            <div class="text-muted">Số chunk</div>
+            <div class="fw-semibold">@Model.ChunkCount</div>
+        </div>
+        <div class="col-md-6">
+            <div class="text-muted">Ngày upload</div>
+            <div class="fw-semibold">@Model.UploadedAtUtc.ToLocalTime().ToString("g")</div>
+        </div>
+        @if (Model.UpdatedAtUtc.HasValue)
+        {
+            <div class="col-md-6">
+                <div class="text-muted">Cập nhật lần cuối</div>
+                <div class="fw-semibold">@Model.UpdatedAtUtc.Value.ToLocalTime().ToString("g")</div>
+            </div>
+        }
+        @if (Model.ArchivedAtUtc.HasValue)
+        {
+            <div class="col-md-6">
+                <div class="text-muted">Archive lúc</div>
+                <div class="fw-semibold">@Model.ArchivedAtUtc.Value.ToLocalTime().ToString("g")</div>
+            </div>
+        }
+    </div>
+</section>
+
+<section class="card-panel mb-4">
+    <h2 class="section-title">Mô tả</h2>
+    <p class="mb-0">@(string.IsNullOrWhiteSpace(Model.Description) ? "Chưa có mô tả." : Model.Description)</p>
+</section>
+
+@if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+{
+    <section class="card-panel mb-4">
+        <h2 class="section-title">Lỗi xử lý</h2>
+        <p class="text-danger mb-0">@Model.ErrorMessage</p>
+    </section>
+}
+
+<section class="card-panel">
+    <h2 class="section-title">Thao tác</h2>
+    <div class="d-flex flex-wrap gap-2">
+        <form asp-action="Archive" asp-route-id="@Model.Id" method="post">
+            <button type="submit" class="btn btn-outline-warning" disabled="@Model.IsArchived">Archive</button>
+        </form>
+        <form asp-action="Reindex" asp-route-id="@Model.Id" method="post">
+            <button type="submit" class="btn btn-outline-secondary" disabled="@Model.IsArchived">Re-index</button>
+        </form>
+    </div>
+</section>
+
+@functions {
+    private static string FormatBytes(long bytes)
+    {
+        if (bytes < 1024)
+        {
+            return $"{bytes} B";
+        }
+
+        var kb = bytes / 1024d;
+        if (kb < 1024)
+        {
+            return $"{kb:0.##} KB";
+        }
+
+        return $"{kb / 1024d:0.##} MB";
+    }
+}

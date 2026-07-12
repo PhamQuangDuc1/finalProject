@@ -5,8 +5,10 @@ using DAL.Interfaces;
 
 namespace BLL.Services;
 
-public class SystemSettingService : ISystemSettingService
+public class SystemSettingService : ISystemSettingService, IChunkConfigurationService
 {
+    private const int MaximumTopK = 50;
+
     private readonly ISystemSettingRepository _systemSettingRepository;
 
     public SystemSettingService(ISystemSettingRepository systemSettingRepository)
@@ -25,6 +27,7 @@ public class SystemSettingService : ISystemSettingService
     public async Task UpdateAsync(CurrentUserDto currentUser, UpdateSystemSettingDto setting, CancellationToken cancellationToken = default)
     {
         AuthorizationGuard.RequireRole(currentUser, UserRole.Admin);
+        ValidateSetting(setting);
 
         var entity = await _systemSettingRepository.GetCurrentAsync(cancellationToken)
             ?? throw new InvalidOperationException("System setting was not found.");
@@ -48,7 +51,37 @@ public class SystemSettingService : ISystemSettingService
             ChunkSize = setting.ChunkSize,
             ChunkOverlap = setting.ChunkOverlap,
             TopK = setting.TopK,
-            UpdatedAt = setting.UpdatedAt
+            UpdatedAt = setting.UpdatedAt,
+            UpdatedByAdminId = setting.UpdatedByAdminId,
+            UpdatedByAdminName = setting.UpdatedByAdmin?.FullName ?? string.Empty
         };
+    }
+
+    private static void ValidateSetting(UpdateSystemSettingDto setting)
+    {
+        if (!Enum.IsDefined(setting.ChunkStrategy))
+        {
+            throw new InvalidOperationException("Chunk strategy is not valid.");
+        }
+
+        if (setting.ChunkSize <= 0)
+        {
+            throw new InvalidOperationException("Chunk Size must be greater than 0.");
+        }
+
+        if (setting.ChunkOverlap < 0)
+        {
+            throw new InvalidOperationException("Chunk Overlap must be greater than or equal to 0.");
+        }
+
+        if (setting.ChunkOverlap >= setting.ChunkSize)
+        {
+            throw new InvalidOperationException("Chunk Overlap must be smaller than Chunk Size.");
+        }
+
+        if (setting.TopK <= 0 || setting.TopK > MaximumTopK)
+        {
+            throw new InvalidOperationException($"Top-K must be between 1 and {MaximumTopK}.");
+        }
     }
 }

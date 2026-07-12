@@ -77,4 +77,30 @@ public class DocumentRepository : IDocumentRepository
         _dbContext.Documents.Update(document);
         await _dbContext.SaveChangesAsync(cancellationToken);
     }
+
+    public async Task ReplaceChunksInTransactionAsync(Document document, IReadOnlyList<DocumentChunk> chunks, CancellationToken cancellationToken = default)
+    {
+        await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+
+        if (_dbContext.Entry(document).State == EntityState.Detached)
+        {
+            _dbContext.Documents.Attach(document);
+        }
+
+        var existingChunks = await _dbContext.DocumentChunks
+            .Where(chunk => chunk.DocumentId == document.Id)
+            .ToListAsync(cancellationToken);
+
+        _dbContext.DocumentChunks.RemoveRange(existingChunks);
+        document.Chunks.Clear();
+
+        foreach (var chunk in chunks)
+        {
+            chunk.DocumentId = document.Id;
+            _dbContext.DocumentChunks.Add(chunk);
+        }
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+    }
 }

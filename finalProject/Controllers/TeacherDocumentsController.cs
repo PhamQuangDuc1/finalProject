@@ -3,10 +3,12 @@ using BLL.DTOs;
 using BLL.Interfaces;
 using DAL.Entities;
 using finalProject.Authorization;
+using finalProject.Hubs;
 using finalProject.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.SignalR;
 
 namespace finalProject.Controllers;
 
@@ -22,11 +24,16 @@ public class TeacherDocumentsController : Controller
 
     private readonly IDocumentService _documentService;
     private readonly IWebHostEnvironment _environment;
+    private readonly IHubContext<DocumentProcessingHub> _hubContext;
 
-    public TeacherDocumentsController(IDocumentService documentService, IWebHostEnvironment environment)
+    public TeacherDocumentsController(
+        IDocumentService documentService,
+        IWebHostEnvironment environment,
+        IHubContext<DocumentProcessingHub> hubContext)
     {
         _documentService = documentService;
         _environment = environment;
+        _hubContext = hubContext;
     }
 
     public async Task<IActionResult> Index(int? subjectId, DocumentStatus? status, int? chapterId, string? search, CancellationToken cancellationToken)
@@ -73,7 +80,7 @@ public class TeacherDocumentsController : Controller
 
         if (model.File.Length == 0)
         {
-            ModelState.AddModelError(nameof(model.File), "Tệp tải lên không được rỗng.");
+            ModelState.AddModelError(nameof(model.File), "Tep tai len khong duoc rong.");
             await BuildUploadViewModelAsync(model, cancellationToken);
             return View(model);
         }
@@ -81,7 +88,7 @@ public class TeacherDocumentsController : Controller
         var extension = Path.GetExtension(model.File.FileName);
         if (!AllowedUploadExtensions.Contains(extension))
         {
-            ModelState.AddModelError(nameof(model.File), "Chỉ cho phép tải lên file PDF, DOCX hoặc PPTX.");
+            ModelState.AddModelError(nameof(model.File), "Chi cho phep tai len file PDF, DOCX hoac PPTX.");
             await BuildUploadViewModelAsync(model, cancellationToken);
             return View(model);
         }
@@ -117,12 +124,19 @@ public class TeacherDocumentsController : Controller
             return View(model);
         }
 
-        TempData["StatusMessage"] = $"Đã upload tài liệu #{documentId}. Hệ thống đã xử lý chunk và index theo cấu hình hiện tại.";
+        await BroadcastDocumentEventAsync("DocumentCreated", "Created", documentId, currentUser, cancellationToken);
+
+        TempData["StatusMessage"] = $"Da upload tai lieu #{documentId}. He thong da xu ly chunk va index theo cau hinh hien tai.";
 
         return RedirectToAction(nameof(Index));
     }
 
-    public async Task<IActionResult> ViewDocument(int id, CancellationToken cancellationToken)
+    public IActionResult ViewDocument(int id)
+    {
+        return RedirectToAction(nameof(Details), new { id });
+    }
+
+    public async Task<IActionResult> Details(int id, CancellationToken cancellationToken)
     {
         DocumentDto? document;
         try
@@ -134,9 +148,10 @@ public class TeacherDocumentsController : Controller
             return Forbid();
         }
 
-        return document is null ? NotFound() : Content($"{document.Title}\n{document.SubjectName}\n{document.Status}", "text/plain");
+        return document is null ? NotFound() : View(document);
     }
 
+    [HttpGet]
     public async Task<IActionResult> Edit(int id, CancellationToken cancellationToken)
     {
         DocumentDto? document;
@@ -154,24 +169,70 @@ public class TeacherDocumentsController : Controller
             return NotFound();
         }
 
-        TempData["StatusMessage"] = "Màn hình sửa tài liệu sẽ được triển khai ở giai đoạn sau.";
-        return RedirectToAction(nameof(Index));
+        return View(await BuildEditViewModelAsync(new DocumentEditViewModel
+        {
+            Id = document.Id,
+            SubjectId = document.SubjectId,
+            ChapterId = document.ChapterId,
+            Title = document.Title,
+            Description = document.Description
+        }, cancellationToken));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Edit(DocumentEditViewModel model, CancellationToken cancellationToken)
+    {
+        if (!ModelState.IsValid)
+        {
+            return View(await BuildEditViewModelAsync(model, cancellationToken));
+        }
+
+        var currentUser = GetCurrentUser();
+        try
+        {
+            await _documentService.UpdateDocumentAsync(currentUser, new UpdateDocumentDto
+            {
+                Id = model.Id,
+                SubjectId = model.SubjectId,
+                ChapterId = model.ChapterId,
+                Title = model.Title,
+                Description = model.Description
+            }, cancellationToken);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
+        catch (InvalidOperationException ex)
+        {
+            ModelState.AddModelError(string.Empty, ex.Message);
+            return View(await BuildEditViewModelAsync(model, cancellationToken));
+        }
+
+        await BroadcastDocumentEventAsync("DocumentUpdated", "Updated", model.Id, currentUser, cancellationToken);
+
+        TempData["StatusMessage"] = "Da cap nhat tai lieu.";
+        return RedirectToAction(nameof(Details), new { id = model.Id });
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Archive(int id, CancellationToken cancellationToken)
     {
+        var currentUser = GetCurrentUser();
         try
         {
-            await _documentService.ArchiveDocumentAsync(GetCurrentUser(), id, cancellationToken);
+            await _documentService.ArchiveDocumentAsync(currentUser, id, cancellationToken);
         }
         catch (UnauthorizedAccessException)
         {
             return Forbid();
         }
 
-        TempData["StatusMessage"] = "Đã archive tài liệu.";
+        await BroadcastDocumentEventAsync("DocumentArchived", "Archived", id, currentUser, cancellationToken);
+
+        TempData["StatusMessage"] = "Da archive tai lieu.";
 
         return RedirectToAction(nameof(Index));
     }
@@ -180,18 +241,26 @@ public class TeacherDocumentsController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Reindex(int id, CancellationToken cancellationToken)
     {
+        var currentUser = GetCurrentUser();
         try
         {
-            await _documentService.ReindexDocumentAsync(GetCurrentUser(), id, cancellationToken);
+            await _documentService.ReindexDocumentAsync(currentUser, id, cancellationToken);
         }
         catch (UnauthorizedAccessException)
         {
             return Forbid();
         }
+        catch (InvalidOperationException ex)
+        {
+            TempData["StatusMessage"] = ex.Message;
+            return RedirectToAction(nameof(Details), new { id });
+        }
 
-        TempData["StatusMessage"] = "Đã đưa tài liệu vào trạng thái re-index.";
+        await BroadcastDocumentEventAsync("DocumentReindexed", "Re-indexed", id, currentUser, cancellationToken);
 
-        return RedirectToAction(nameof(Index));
+        TempData["StatusMessage"] = "Da re-index tai lieu theo cau hinh chunk hien tai.";
+
+        return RedirectToAction(nameof(Details), new { id });
     }
 
     public async Task<IActionResult> Download(int id, CancellationToken cancellationToken)
@@ -213,7 +282,7 @@ public class TeacherDocumentsController : Controller
 
         if (!System.IO.File.Exists(document.FilePath))
         {
-            TempData["StatusMessage"] = "Tệp tài liệu chưa có trên hệ thống lưu trữ.";
+            TempData["StatusMessage"] = "Tep tai lieu chua co tren he thong luu tru.";
             return RedirectToAction(nameof(Index));
         }
 
@@ -244,6 +313,19 @@ public class TeacherDocumentsController : Controller
         return model;
     }
 
+    private async Task<DocumentEditViewModel> BuildEditViewModelAsync(DocumentEditViewModel model, CancellationToken cancellationToken)
+    {
+        var options = await _documentService.GetUploadOptionsForTeacherAsync(GetCurrentUser(), cancellationToken);
+        model.SubjectOptions = options.Subjects
+            .Select(subject => new SelectListItem(subject.DisplayName, subject.Id.ToString(), subject.Id == model.SubjectId))
+            .ToList();
+        model.ChapterOptions = options.Chapters
+            .Select(chapter => new SelectListItem(chapter.DisplayName, chapter.Id.ToString(), chapter.Id == model.ChapterId))
+            .ToList();
+
+        return model;
+    }
+
     private static IReadOnlyList<SelectListItem> GetStatusOptions()
     {
         return Enum.GetValues<DocumentStatus>()
@@ -258,6 +340,34 @@ public class TeacherDocumentsController : Controller
             .GroupBy(document => document.ChapterId!.Value)
             .Select(group => new SelectListItem(group.First().ChapterName, group.Key.ToString()))
             .ToList();
+    }
+
+    private async Task BroadcastDocumentEventAsync(
+        string eventName,
+        string action,
+        int documentId,
+        CurrentUserDto currentUser,
+        CancellationToken cancellationToken)
+    {
+        var document = await _documentService.GetDocumentByIdAsync(currentUser, documentId, cancellationToken);
+        if (document is null)
+        {
+            return;
+        }
+
+        var payload = new DocumentRealtimeEventDto
+        {
+            DocumentId = document.Id,
+            TeacherUploader = document.UploadedByTeacherName,
+            Document = document.Title,
+            Subject = document.SubjectName,
+            Action = action,
+            Status = document.Status,
+            OccurredAtUtc = DateTime.UtcNow
+        };
+
+        await _hubContext.Clients.Group(DocumentProcessingHub.AdminGroup).SendAsync(eventName, payload, cancellationToken);
+        await _hubContext.Clients.Group(DocumentProcessingHub.GetTeacherGroupName(document.UploadedByTeacherId)).SendAsync(eventName, payload, cancellationToken);
     }
 
     private CurrentUserDto GetCurrentUser()
