@@ -4,11 +4,29 @@
     ViewData["Title"] = "Sửa tài liệu";
 }
 
-<section class="card-panel col-lg-8">
+<section class="card-panel col-lg-10">
     <h1 class="section-title">Sửa tài liệu</h1>
     <form asp-action="Edit" method="post">
         <input asp-for="Id" type="hidden" />
+        <input asp-for="OriginalFileName" type="hidden" />
+        <input asp-for="CurrentStatus" type="hidden" />
+        <input asp-for="ContentVersion" type="hidden" />
         <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+        <div class="alert alert-warning" role="alert">
+            Việc lưu thay đổi sẽ cập nhật nội dung tài liệu và tạo lại các đoạn dữ liệu đã index.
+        </div>
+
+        <div class="row g-3 mb-3">
+            <div class="col-md-6">
+                <div class="text-muted">File gốc</div>
+                <div class="fw-semibold">@Model.OriginalFileName</div>
+            </div>
+            <div class="col-md-6">
+                <div class="text-muted">Trạng thái hiện tại</div>
+                <div class="fw-semibold">@Model.CurrentStatus</div>
+            </div>
+        </div>
 
         <div class="mb-3">
             <label asp-for="Title" class="form-label"></label>
@@ -27,7 +45,7 @@
         <div class="mb-3">
             <label asp-for="ChapterId" class="form-label"></label>
             <select asp-for="ChapterId" asp-items="Model.ChapterOptions" class="form-select">
-                <option value="">Không gán chương</option>
+                <option value="">Không gắn chương</option>
             </select>
             <span asp-validation-for="ChapterId" class="text-danger"></span>
         </div>
@@ -38,7 +56,13 @@
             <span asp-validation-for="Description" class="text-danger"></span>
         </div>
 
-        <button type="submit" class="btn btn-primary">Lưu</button>
+        <div class="mb-3">
+            <label asp-for="Content" class="form-label"></label>
+            <textarea asp-for="Content" class="form-control" rows="25"></textarea>
+            <span asp-validation-for="Content" class="text-danger"></span>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Lưu thay đổi</button>
         <a class="btn btn-outline-secondary" asp-action="Details" asp-route-id="@Model.Id">Hủy</a>
     </form>
 </section>

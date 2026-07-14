@@ -20,8 +20,11 @@ public class DocumentRepository : IDocumentRepository
             .Include(document => document.Subject)
                 .ThenInclude(subject => subject!.Department)
             .Include(document => document.UploadedByTeacher)
+            .Include(document => document.ContentUpdatedByTeacher)
             .Include(document => document.Chapter)
             .Include(document => document.Chunks)
+            .Include(document => document.Versions)
+                .ThenInclude(version => version.UpdatedByTeacher)
             .OrderByDescending(document => document.UploadedAt)
             .ToListAsync(cancellationToken);
     }
@@ -32,9 +35,12 @@ public class DocumentRepository : IDocumentRepository
             .Include(document => document.Subject)
                 .ThenInclude(subject => subject!.Department)
             .Include(document => document.UploadedByTeacher)
+            .Include(document => document.ContentUpdatedByTeacher)
             .Include(document => document.Chapter)
             .Where(document => document.UploadedByTeacherId == teacherId)
             .Include(document => document.Chunks)
+            .Include(document => document.Versions)
+                .ThenInclude(version => version.UpdatedByTeacher)
             .OrderByDescending(document => document.UploadedAt)
             .ToListAsync(cancellationToken);
     }
@@ -45,8 +51,11 @@ public class DocumentRepository : IDocumentRepository
             .Include(document => document.Subject)
                 .ThenInclude(subject => subject!.Department)
             .Include(document => document.UploadedByTeacher)
+            .Include(document => document.ContentUpdatedByTeacher)
             .Include(document => document.Chapter)
             .Include(document => document.Chunks)
+            .Include(document => document.Versions)
+                .ThenInclude(version => version.UpdatedByTeacher)
             .Where(document => document.Status == DocumentStatus.Indexed
                 && !document.IsArchived
                 && document.Subject != null
@@ -61,8 +70,11 @@ public class DocumentRepository : IDocumentRepository
             .Include(document => document.Subject)
                 .ThenInclude(subject => subject!.Department)
             .Include(document => document.UploadedByTeacher)
+            .Include(document => document.ContentUpdatedByTeacher)
             .Include(document => document.Chapter)
             .Include(document => document.Chunks)
+            .Include(document => document.Versions)
+                .ThenInclude(version => version.UpdatedByTeacher)
             .FirstOrDefaultAsync(document => document.Id == id, cancellationToken);
     }
 
@@ -99,6 +111,43 @@ public class DocumentRepository : IDocumentRepository
             chunk.DocumentId = document.Id;
             _dbContext.DocumentChunks.Add(chunk);
         }
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+    }
+
+    public async Task UpdateContentInTransactionAsync(
+        Document document,
+        DocumentVersion? previousVersion,
+        IReadOnlyList<DocumentChunk> chunks,
+        CancellationToken cancellationToken = default)
+    {
+        await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+
+        if (_dbContext.Entry(document).State == EntityState.Detached)
+        {
+            _dbContext.Documents.Attach(document);
+        }
+
+        if (previousVersion is not null)
+        {
+            _dbContext.DocumentVersions.Add(previousVersion);
+        }
+
+        var existingChunks = await _dbContext.DocumentChunks
+            .Where(chunk => chunk.DocumentId == document.Id)
+            .ToListAsync(cancellationToken);
+
+        _dbContext.DocumentChunks.RemoveRange(existingChunks);
+        document.Chunks.Clear();
+
+        foreach (var chunk in chunks)
+        {
+            chunk.DocumentId = document.Id;
+            _dbContext.DocumentChunks.Add(chunk);
+        }
+
+        _dbContext.Documents.Update(document);
 
         await _dbContext.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);

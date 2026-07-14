@@ -38,6 +38,18 @@ public class Document
 
     public string? ErrorMessage { get; set; }
 
+    public string? ExtractedContent { get; set; }
+
+    public string? EditedContent { get; set; }
+
+    public bool HasManualEdits { get; set; }
+
+    public DateTime? ContentUpdatedAt { get; set; }
+
+    public int? ContentUpdatedByTeacherId { get; set; }
+
+    public int ContentVersion { get; set; } = 1;
+
     public Subject? Subject { get; set; }
 
     public Chapter? Chapter { get; set; }
@@ -46,7 +58,11 @@ public class Document
 
     public User? ArchivedByTeacher { get; set; }
 
+    public User? ContentUpdatedByTeacher { get; set; }
+
     public ICollection<DocumentChunk> Chunks { get; set; } = new List<DocumentChunk>();
+
+    public ICollection<DocumentVersion> Versions { get; set; } = new List<DocumentVersion>();
 
     public ICollection<AiUsageLog> AiUsageLogs { get; set; } = new List<AiUsageLog>();
 }

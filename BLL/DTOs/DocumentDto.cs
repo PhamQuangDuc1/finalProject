@@ -45,4 +45,18 @@ public class DocumentDto
     public int? ArchivedByTeacherId { get; set; }
 
     public string? ErrorMessage { get; set; }
+
+    public string CurrentContent { get; set; } = string.Empty;
+
+    public bool HasManualEdits { get; set; }
+
+    public DateTime? ContentUpdatedAtUtc { get; set; }
+
+    public int? ContentUpdatedByTeacherId { get; set; }
+
+    public string ContentUpdatedByTeacherName { get; set; } = string.Empty;
+
+    public int ContentVersion { get; set; } = 1;
+
+    public IReadOnlyList<DocumentVersionDto> Versions { get; set; } = Array.Empty<DocumentVersionDto>();
 }

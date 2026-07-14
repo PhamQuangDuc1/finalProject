@@ -24,6 +24,8 @@ public class AppDbContext : DbContext
 
     public DbSet<DocumentChunk> DocumentChunks => Set<DocumentChunk>();
 
+    public DbSet<DocumentVersion> DocumentVersions => Set<DocumentVersion>();
+
     public DbSet<SystemSetting> SystemSettings => Set<SystemSetting>();
 
     public DbSet<AiUsageLog> AiUsageLogs => Set<AiUsageLog>();
@@ -41,6 +43,7 @@ public class AppDbContext : DbContext
         ConfigureChapters(modelBuilder);
         ConfigureDocuments(modelBuilder);
         ConfigureDocumentChunks(modelBuilder);
+        ConfigureDocumentVersions(modelBuilder);
         ConfigureSystemSettings(modelBuilder);
         ConfigureAiUsageLogs(modelBuilder);
         SeedData(modelBuilder, createdAt);
@@ -195,6 +198,9 @@ public class AppDbContext : DbContext
             entity.Property(document => document.ErrorMessage)
                 .HasMaxLength(2000);
 
+            entity.Property(document => document.ContentVersion)
+                .HasDefaultValue(1);
+
             entity.HasIndex(document => new { document.SubjectId, document.UploadedByTeacherId });
 
             entity.HasOne(document => document.Subject)
@@ -217,6 +223,11 @@ public class AppDbContext : DbContext
                 .HasForeignKey(document => document.ArchivedByTeacherId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            entity.HasOne(document => document.ContentUpdatedByTeacher)
+                .WithMany(user => user.ContentUpdatedDocuments)
+                .HasForeignKey(document => document.ContentUpdatedByTeacherId)
+                .OnDelete(DeleteBehavior.Restrict);
+
             entity.ToTable(table =>
             {
                 table.HasCheckConstraint(
@@ -224,6 +235,31 @@ public class AppDbContext : DbContext
                     "[Status] IN (0, 1, 2, 3, 4)");
                 table.HasTrigger("TR_Documents_TeacherRoles");
             });
+        });
+    }
+
+    private static void ConfigureDocumentVersions(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<DocumentVersion>(entity =>
+        {
+            entity.Property(version => version.Content)
+                .IsRequired();
+
+            entity.Property(version => version.ChangeNote)
+                .HasMaxLength(500);
+
+            entity.HasIndex(version => new { version.DocumentId, version.VersionNumber })
+                .IsUnique();
+
+            entity.HasOne(version => version.Document)
+                .WithMany(document => document.Versions)
+                .HasForeignKey(version => version.DocumentId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(version => version.UpdatedByTeacher)
+                .WithMany(user => user.DocumentVersions)
+                .HasForeignKey(version => version.UpdatedByTeacherId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
     }
 

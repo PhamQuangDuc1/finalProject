@@ -178,6 +178,17 @@ namespace DAL.Migrations
                     b.Property<int?>("ChapterId")
                         .HasColumnType("int");
 
+                    b.Property<DateTime?>("ContentUpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("ContentUpdatedByTeacherId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ContentVersion")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(1);
+
                     b.Property<string>("ContentType")
                         .IsRequired()
                         .HasMaxLength(120)
@@ -191,6 +202,12 @@ namespace DAL.Migrations
                         .HasMaxLength(2000)
                         .HasColumnType("nvarchar(2000)");
 
+                    b.Property<string>("EditedContent")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ExtractedContent")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("FilePath")
                         .IsRequired()
                         .HasMaxLength(1000)
@@ -200,6 +217,9 @@ namespace DAL.Migrations
                         .HasColumnType("bigint");
 
                     b.Property<bool>("IsArchived")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("HasManualEdits")
                         .HasColumnType("bit");
 
                     b.Property<string>("OriginalFileName")
@@ -238,6 +258,8 @@ namespace DAL.Migrations
 
                     b.HasIndex("ChapterId");
 
+                    b.HasIndex("ContentUpdatedByTeacherId");
+
                     b.HasIndex("UploadedByTeacherId");
 
                     b.HasIndex("SubjectId", "UploadedByTeacherId");
@@ -250,6 +272,44 @@ namespace DAL.Migrations
                         });
 
                     b.HasAnnotation("SqlServer:UseSqlOutputClause", false);
+                });
+
+            modelBuilder.Entity("DAL.Entities.DocumentVersion", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ChangeNote")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("DocumentId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("UpdatedByTeacherId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("VersionNumber")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UpdatedByTeacherId");
+
+                    b.HasIndex("DocumentId", "VersionNumber")
+                        .IsUnique();
+
+                    b.ToTable("DocumentVersions");
                 });
 
             modelBuilder.Entity("DAL.Entities.DocumentChunk", b =>
@@ -591,6 +651,11 @@ namespace DAL.Migrations
                         .HasForeignKey("ChapterId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("DAL.Entities.User", "ContentUpdatedByTeacher")
+                        .WithMany("ContentUpdatedDocuments")
+                        .HasForeignKey("ContentUpdatedByTeacherId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("DAL.Entities.Subject", "Subject")
                         .WithMany("Documents")
                         .HasForeignKey("SubjectId")
@@ -607,9 +672,30 @@ namespace DAL.Migrations
 
                     b.Navigation("Chapter");
 
+                    b.Navigation("ContentUpdatedByTeacher");
+
                     b.Navigation("Subject");
 
                     b.Navigation("UploadedByTeacher");
+                });
+
+            modelBuilder.Entity("DAL.Entities.DocumentVersion", b =>
+                {
+                    b.HasOne("DAL.Entities.Document", "Document")
+                        .WithMany("Versions")
+                        .HasForeignKey("DocumentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DAL.Entities.User", "UpdatedByTeacher")
+                        .WithMany("DocumentVersions")
+                        .HasForeignKey("UpdatedByTeacherId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Document");
+
+                    b.Navigation("UpdatedByTeacher");
                 });
 
             modelBuilder.Entity("DAL.Entities.DocumentChunk", b =>
@@ -679,6 +765,8 @@ namespace DAL.Migrations
                     b.Navigation("AiUsageLogs");
 
                     b.Navigation("Chunks");
+
+                    b.Navigation("Versions");
                 });
 
             modelBuilder.Entity("DAL.Entities.Subject", b =>
@@ -695,6 +783,10 @@ namespace DAL.Migrations
                     b.Navigation("AiUsageLogs");
 
                     b.Navigation("ArchivedDocuments");
+
+                    b.Navigation("ContentUpdatedDocuments");
+
+                    b.Navigation("DocumentVersions");
 
                     b.Navigation("ManagedDepartments");
 

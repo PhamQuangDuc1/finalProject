@@ -7,11 +7,11 @@
 <div class="d-flex align-items-center justify-content-between mb-3">
     <div>
         <h1 class="h3 mb-1">@Model.Title</h1>
-        <p class="text-muted mb-0">@Model.SubjectName - @(string.IsNullOrWhiteSpace(Model.ChapterName) ? "Chưa gán chương" : Model.ChapterName)</p>
+        <p class="text-muted mb-0">@Model.SubjectName - @(string.IsNullOrWhiteSpace(Model.ChapterName) ? "Chưa gắn chương" : Model.ChapterName)</p>
     </div>
     <div class="d-flex flex-wrap gap-2">
         <a class="btn btn-outline-secondary" asp-action="Index">Quay lại</a>
-        <a class="btn btn-outline-primary" asp-action="Download" asp-route-id="@Model.Id">Tải xuống</a>
+        <a class="btn btn-outline-primary" asp-action="Download" asp-route-id="@Model.Id">Tải xuống file gốc</a>
         <a class="btn btn-primary" asp-action="Edit" asp-route-id="@Model.Id">Sửa</a>
     </div>
 </div>
@@ -21,54 +21,36 @@
     <div class="alert alert-info" role="alert">@statusMessage</div>
 }
 
+@if (Model.HasManualEdits)
+{
+    <div class="alert alert-warning" role="alert">
+        Nội dung đã được giảng viên chỉnh sửa. File gốc vẫn được giữ nguyên để tải xuống và đối chiếu.
+    </div>
+}
+
 <section class="card-panel mb-4">
     <h2 class="section-title">Thông tin tài liệu</h2>
     <div class="row g-3">
-        <div class="col-md-6">
-            <div class="text-muted">Môn học</div>
-            <div class="fw-semibold">@Model.SubjectName</div>
-        </div>
-        <div class="col-md-6">
-            <div class="text-muted">Bộ môn</div>
-            <div class="fw-semibold">@Model.DepartmentName</div>
-        </div>
-        <div class="col-md-6">
-            <div class="text-muted">Người upload</div>
-            <div class="fw-semibold">@Model.UploadedByTeacherName</div>
-        </div>
-        <div class="col-md-6">
-            <div class="text-muted">Trạng thái</div>
-            <div class="fw-semibold">@Model.Status</div>
-        </div>
-        <div class="col-md-6">
-            <div class="text-muted">Tên tệp</div>
-            <div class="fw-semibold">@Model.FileName</div>
-        </div>
-        <div class="col-md-6">
-            <div class="text-muted">Dung lượng</div>
-            <div class="fw-semibold">@FormatBytes(Model.FileSize)</div>
-        </div>
-        <div class="col-md-6">
-            <div class="text-muted">Số chunk</div>
-            <div class="fw-semibold">@Model.ChunkCount</div>
-        </div>
-        <div class="col-md-6">
-            <div class="text-muted">Ngày upload</div>
-            <div class="fw-semibold">@Model.UploadedAtUtc.ToLocalTime().ToString("g")</div>
-        </div>
-        @if (Model.UpdatedAtUtc.HasValue)
+        <div class="col-md-6"><div class="text-muted">Môn học</div><div class="fw-semibold">@Model.SubjectName</div></div>
+        <div class="col-md-6"><div class="text-muted">Bộ môn</div><div class="fw-semibold">@Model.DepartmentName</div></div>
+        <div class="col-md-6"><div class="text-muted">Người tải lên</div><div class="fw-semibold">@Model.UploadedByTeacherName</div></div>
+        <div class="col-md-6"><div class="text-muted">Trạng thái</div><div class="fw-semibold">@Model.Status</div></div>
+        <div class="col-md-6"><div class="text-muted">File gốc</div><div class="fw-semibold">@Model.FileName</div></div>
+        <div class="col-md-6"><div class="text-muted">Dung lượng</div><div class="fw-semibold">@FormatBytes(Model.FileSize)</div></div>
+        <div class="col-md-6"><div class="text-muted">Số đoạn dữ liệu</div><div class="fw-semibold">@Model.ChunkCount</div></div>
+        <div class="col-md-6"><div class="text-muted">Phiên bản nội dung</div><div class="fw-semibold">@Model.ContentVersion</div></div>
+        <div class="col-md-6"><div class="text-muted">Ngày tải lên</div><div class="fw-semibold">@Model.UploadedAtUtc.ToLocalTime().ToString("g")</div></div>
+        @if (Model.ContentUpdatedAtUtc.HasValue)
         {
-            <div class="col-md-6">
-                <div class="text-muted">Cập nhật lần cuối</div>
-                <div class="fw-semibold">@Model.UpdatedAtUtc.Value.ToLocalTime().ToString("g")</div>
-            </div>
+            <div class="col-md-6"><div class="text-muted">Cập nhật nội dung</div><div class="fw-semibold">@Model.ContentUpdatedAtUtc.Value.ToLocalTime().ToString("g")</div></div>
+        }
+        @if (!string.IsNullOrWhiteSpace(Model.ContentUpdatedByTeacherName))
+        {
+            <div class="col-md-6"><div class="text-muted">Người cập nhật nội dung</div><div class="fw-semibold">@Model.ContentUpdatedByTeacherName</div></div>
         }
         @if (Model.ArchivedAtUtc.HasValue)
         {
-            <div class="col-md-6">
-                <div class="text-muted">Archive lúc</div>
-                <div class="fw-semibold">@Model.ArchivedAtUtc.Value.ToLocalTime().ToString("g")</div>
-            </div>
+            <div class="col-md-6"><div class="text-muted">Lưu trữ lúc</div><div class="fw-semibold">@Model.ArchivedAtUtc.Value.ToLocalTime().ToString("g")</div></div>
         }
     </div>
 </section>
@@ -77,6 +59,48 @@
     <h2 class="section-title">Mô tả</h2>
     <p class="mb-0">@(string.IsNullOrWhiteSpace(Model.Description) ? "Chưa có mô tả." : Model.Description)</p>
 </section>
+
+<section class="card-panel mb-4">
+    <h2 class="section-title">Nội dung hiện tại</h2>
+    @if (string.IsNullOrWhiteSpace(Model.CurrentContent))
+    {
+        <p class="text-muted mb-0">Chưa có nội dung được trích xuất.</p>
+    }
+    else
+    {
+        <pre class="mb-0 p-3 bg-light border rounded text-wrap" style="white-space: pre-wrap;">@Model.CurrentContent</pre>
+    }
+</section>
+
+@if (Model.Versions.Count > 0)
+{
+    <section class="card-panel mb-4">
+        <h2 class="section-title">Lịch sử phiên bản</h2>
+        <div class="table-responsive">
+            <table class="table table-striped align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Phiên bản</th>
+                        <th>Ngày chỉnh sửa</th>
+                        <th>Người chỉnh sửa</th>
+                        <th>Ghi chú</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @foreach (var version in Model.Versions)
+                {
+                    <tr>
+                        <td>Phiên bản @version.VersionNumber</td>
+                        <td>@version.UpdatedAtUtc.ToLocalTime().ToString("g")</td>
+                        <td>@version.UpdatedByTeacherName</td>
+                        <td>@version.ChangeNote</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </section>
+}
 
 @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
 {
@@ -90,10 +114,10 @@
     <h2 class="section-title">Thao tác</h2>
     <div class="d-flex flex-wrap gap-2">
         <form asp-action="Archive" asp-route-id="@Model.Id" method="post">
-            <button type="submit" class="btn btn-outline-warning" disabled="@Model.IsArchived">Archive</button>
+            <button type="submit" class="btn btn-outline-warning" disabled="@Model.IsArchived">Lưu trữ</button>
         </form>
         <form asp-action="Reindex" asp-route-id="@Model.Id" method="post">
-            <button type="submit" class="btn btn-outline-secondary" disabled="@Model.IsArchived">Re-index</button>
+            <button type="submit" class="btn btn-outline-secondary" disabled="@Model.IsArchived">Tạo lại chỉ mục</button>
         </form>
     </div>
 </section>
