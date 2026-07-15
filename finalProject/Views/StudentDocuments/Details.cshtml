@@ -7,11 +7,11 @@
 <div class="d-flex align-items-center justify-content-between mb-3">
     <div>
         <h1 class="h3 mb-1">@Model.Title</h1>
-        <p class="text-muted mb-0">@Model.SubjectName - @(string.IsNullOrWhiteSpace(Model.ChapterName) ? "Chưa gán chương" : Model.ChapterName)</p>
+        <p class="text-muted mb-0">@Model.SubjectName - @(string.IsNullOrWhiteSpace(Model.ChapterName) ? "Chưa gắn chương" : Model.ChapterName)</p>
     </div>
     <div class="d-flex flex-wrap gap-2">
         <a class="btn btn-outline-secondary" asp-action="Index">Quay lại</a>
-        <a class="btn btn-outline-primary" asp-action="Download" asp-route-id="@Model.Id">Tải xuống</a>
+        <a class="btn btn-outline-primary" asp-action="Download" asp-route-id="@Model.Id">Tải xuống file gốc</a>
     </div>
 </div>
 
@@ -27,8 +27,8 @@
     <div class="row g-3">
         <div class="col-md-6"><div class="text-muted">Môn học</div><div class="fw-semibold">@Model.SubjectName</div></div>
         <div class="col-md-6"><div class="text-muted">Bộ môn</div><div class="fw-semibold">@Model.DepartmentName</div></div>
-        <div class="col-md-6"><div class="text-muted">Người upload</div><div class="fw-semibold">@Model.UploadedByTeacherName</div></div>
-        <div class="col-md-6"><div class="text-muted">Ngày upload</div><div class="fw-semibold">@Model.UploadedAtUtc.ToLocalTime().ToString("g")</div></div>
+        <div class="col-md-6"><div class="text-muted">Người tải lên</div><div class="fw-semibold">@Model.UploadedByTeacherName</div></div>
+        <div class="col-md-6"><div class="text-muted">Ngày tải lên</div><div class="fw-semibold">@Model.UploadedAtUtc.ToLocalTime().ToString("g")</div></div>
     </div>
 </section>
 

@@ -13,4 +13,6 @@ public interface ITeacherAssignmentService
     Task<IReadOnlyList<SubjectOptionDto>> GetSubjectOptionsForTeacherAsync(int teacherId, CancellationToken cancellationToken = default);
 
     Task AssignTeacherToSubjectAsync(CurrentUserDto currentUser, int teacherId, int subjectId, CancellationToken cancellationToken = default);
+
+    Task RemoveTeacherFromSubjectAsync(CurrentUserDto currentUser, int assignmentId, CancellationToken cancellationToken = default);
 }

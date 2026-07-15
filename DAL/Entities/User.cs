@@ -24,7 +24,9 @@ public class User
 
     public ICollection<Document> ArchivedDocuments { get; set; } = new List<Document>();
 
-    public ICollection<Document> ScheduledArchiveDocuments { get; set; } = new List<Document>();
+    public ICollection<Document> ContentUpdatedDocuments { get; set; } = new List<Document>();
+
+    public ICollection<DocumentVersion> DocumentVersions { get; set; } = new List<DocumentVersion>();
 
     public ICollection<SystemSetting> UpdatedSystemSettings { get; set; } = new List<SystemSetting>();
 

@@ -198,6 +198,94 @@ public class DocumentServiceTests
     }
 
     [Fact]
+    public async Task GetEditableDocumentForTeacherAsync_StoresContentFromChunks_WhenFullContentMissing()
+    {
+        var document = CreateDocument(1, 2, DocumentStatus.Indexed, false, "Owned", 10, "PRN222", "Software Engineering", 0);
+        document.Chunks = new List<DocumentChunk>
+        {
+            new() { ChunkIndex = 1, Content = "second chunk" },
+            new() { ChunkIndex = 0, Content = "first chunk" }
+        };
+        var repository = new FakeDocumentRepository(new[] { document });
+        var service = new DocumentService(repository, new FakeTeacherSubjectRepository(), new FakeChunkingService());
+
+        var result = await service.GetEditableDocumentForTeacherAsync(document.Id, 2);
+
+        Assert.NotNull(result);
+        Assert.Equal($"first chunk{Environment.NewLine}{Environment.NewLine}second chunk", result.CurrentContent);
+        Assert.Equal(result.CurrentContent, document.ExtractedContent);
+        Assert.Equal(1, repository.UpdateCalls);
+    }
+
+    [Fact]
+    public async Task GetEditableDocumentForTeacherAsync_Throws_WhenTeacherDoesNotOwnDocument()
+    {
+        var document = CreateDocument(1, 2, DocumentStatus.Indexed, false, "Owned", 10, "PRN222", "Software Engineering", 1);
+        var service = new DocumentService(new FakeDocumentRepository(new[] { document }), new FakeTeacherSubjectRepository(), new FakeChunkingService());
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => service.GetEditableDocumentForTeacherAsync(document.Id, 3));
+    }
+
+    [Fact]
+    public async Task UpdateDocumentContentAsync_ReplacesChunksAndStoresManualEdit()
+    {
+        var storagePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.pdf");
+        await File.WriteAllTextAsync(storagePath, "original file still exists");
+        var document = CreateDocument(1, 2, DocumentStatus.Indexed, false, "Owned", 10, "PRN222", "Software Engineering", 1);
+        document.FilePath = storagePath;
+        document.ExtractedContent = "old extracted content";
+        var repository = new FakeDocumentRepository(new[] { document });
+        var service = new DocumentService(
+            repository,
+            new FakeTeacherSubjectRepository(assignedSubjectIds: new[] { 10 }),
+            new FakeChunkingService(chunkSize: 3, chunkOverlap: 0));
+
+        await service.UpdateDocumentContentAsync(
+            document.Id,
+            teacherId: 2,
+            title: "Updated title",
+            subjectId: 10,
+            chapterId: null,
+            description: "Updated description",
+            content: "alpha beta gamma delta epsilon");
+
+        Assert.Empty(repository.SavedDocuments);
+        Assert.True(File.Exists(storagePath));
+        Assert.Equal("Updated title", document.Title);
+        Assert.Equal("Updated description", document.Description);
+        Assert.Equal("alpha beta gamma delta epsilon", document.EditedContent);
+        Assert.True(document.HasManualEdits);
+        Assert.Equal(2, document.ContentUpdatedByTeacherId);
+        Assert.Equal(2, document.ContentVersion);
+        Assert.Equal(DocumentStatus.Indexed, document.Status);
+        Assert.Equal(1, repository.UpdateContentTransactionCalls);
+        Assert.Equal(2, document.Chunks.Count);
+        Assert.Equal("alpha beta gamma", document.Chunks.First().Content);
+        Assert.Single(document.Versions);
+        Assert.Equal(1, document.Versions.Single().VersionNumber);
+        Assert.Equal("old extracted content", document.Versions.Single().Content);
+    }
+
+    [Fact]
+    public async Task UpdateDocumentContentAsync_Throws_WhenTeacherDoesNotOwnDocument()
+    {
+        var document = CreateDocument(1, 2, DocumentStatus.Indexed, false, "Owned", 10, "PRN222", "Software Engineering", 1);
+        var service = new DocumentService(
+            new FakeDocumentRepository(new[] { document }),
+            new FakeTeacherSubjectRepository(assignedSubjectIds: new[] { 10 }),
+            new FakeChunkingService());
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => service.UpdateDocumentContentAsync(
+            document.Id,
+            teacherId: 3,
+            title: "Updated title",
+            subjectId: 10,
+            chapterId: null,
+            description: null,
+            content: "updated content"));
+    }
+
+    [Fact]
     public async Task ReindexDocumentAsync_ReplacesChunksUsingLatestSystemSetting()
     {
         var storagePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.pdf");
@@ -306,6 +394,8 @@ public class DocumentServiceTests
 
         public List<Document> SavedDocuments { get; } = new();
 
+        public int UpdateCalls { get; private set; }
+
         public FakeDocumentRepository(IReadOnlyList<Document> documents)
         {
             _documents = documents;
@@ -343,14 +433,34 @@ public class DocumentServiceTests
 
         public Task UpdateAsync(Document document, CancellationToken cancellationToken = default)
         {
+            UpdateCalls++;
             return Task.CompletedTask;
         }
 
         public int ReplaceChunkTransactionCalls { get; private set; }
 
+        public int UpdateContentTransactionCalls { get; private set; }
+
         public Task ReplaceChunksInTransactionAsync(Document document, IReadOnlyList<DocumentChunk> chunks, CancellationToken cancellationToken = default)
         {
             ReplaceChunkTransactionCalls++;
+            document.Chunks.Clear();
+            foreach (var chunk in chunks)
+            {
+                document.Chunks.Add(chunk);
+            }
+
+            return Task.CompletedTask;
+        }
+
+        public Task UpdateContentInTransactionAsync(Document document, DocumentVersion? previousVersion, IReadOnlyList<DocumentChunk> chunks, CancellationToken cancellationToken = default)
+        {
+            UpdateContentTransactionCalls++;
+            if (previousVersion is not null)
+            {
+                document.Versions.Add(previousVersion);
+            }
+
             document.Chunks.Clear();
             foreach (var chunk in chunks)
             {
@@ -373,6 +483,11 @@ public class DocumentServiceTests
         public Task<IReadOnlyList<TeacherSubject>> GetAllAsync(CancellationToken cancellationToken = default)
         {
             return Task.FromResult<IReadOnlyList<TeacherSubject>>(Array.Empty<TeacherSubject>());
+        }
+
+        public Task<TeacherSubject?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult<TeacherSubject?>(null);
         }
 
         public Task<IReadOnlyList<TeacherSubject>> GetByTeacherAsync(int teacherId, CancellationToken cancellationToken = default)
@@ -403,6 +518,11 @@ public class DocumentServiceTests
         }
 
         public Task AddAsync(TeacherSubject teacherSubject, CancellationToken cancellationToken = default)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task DeleteAsync(TeacherSubject teacherSubject, CancellationToken cancellationToken = default)
         {
             throw new NotImplementedException();
         }

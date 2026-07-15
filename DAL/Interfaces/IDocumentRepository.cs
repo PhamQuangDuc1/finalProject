@@ -17,4 +17,10 @@ public interface IDocumentRepository
     Task UpdateAsync(Document document, CancellationToken cancellationToken = default);
 
     Task ReplaceChunksInTransactionAsync(Document document, IReadOnlyList<DocumentChunk> chunks, CancellationToken cancellationToken = default);
+
+    Task UpdateContentInTransactionAsync(
+        Document document,
+        DocumentVersion? previousVersion,
+        IReadOnlyList<DocumentChunk> chunks,
+        CancellationToken cancellationToken = default);
 }

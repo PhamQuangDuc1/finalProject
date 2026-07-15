@@ -54,6 +54,24 @@ public class TeacherAssignmentsController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [Authorize(Roles = StudyMateRoles.Admin)]
+    public async Task<IActionResult> RemoveAssignment(int id, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _teacherAssignmentService.RemoveTeacherFromSubjectAsync(GetCurrentUser(), id, cancellationToken);
+            TempData["SuccessMessage"] = "Đã hủy phân công giảng viên khỏi môn học.";
+
+            return RedirectToAction(nameof(Index));
+        }
+        catch (InvalidOperationException)
+        {
+            return NotFound();
+        }
+    }
+
     private async Task<IReadOnlyList<SelectListItem>> GetTeacherOptionsAsync(CancellationToken cancellationToken)
     {
         var teachers = await _teacherAssignmentService.GetTeacherOptionsAsync(cancellationToken);

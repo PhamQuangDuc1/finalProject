@@ -46,20 +46,24 @@
         }
 
         const row = document.createElement("tr");
+        const title = payload.title || payload.document;
+        const subject = payload.subjectName || payload.subject;
+        const teacherName = payload.updatedByTeacherName || payload.teacherUploader;
+        const occurredAt = payload.updatedAtUtc || payload.occurredAtUtc;
         if (mode === "admin") {
             row.innerHTML = `
-                <td>${escapeHtml(payload.teacherUploader)}</td>
-                <td>${escapeHtml(payload.document)}</td>
-                <td>${escapeHtml(payload.subject)}</td>
+                <td>${escapeHtml(teacherName)}</td>
+                <td>${escapeHtml(title)}</td>
+                <td>${escapeHtml(subject)}</td>
                 <td>${escapeHtml(payload.action)}</td>
-                <td>${escapeHtml(formatTime(payload.occurredAtUtc))}</td>`;
+                <td>${escapeHtml(formatTime(occurredAt))}</td>`;
         } else {
             row.innerHTML = `
-                <td>${escapeHtml(payload.document)}</td>
-                <td>${escapeHtml(payload.subject)}</td>
+                <td>${escapeHtml(title)}</td>
+                <td>${escapeHtml(subject)}</td>
                 <td>${escapeHtml(payload.action)}</td>
                 <td>${escapeHtml(payload.status)}</td>
-                <td>${escapeHtml(formatTime(payload.occurredAtUtc))}</td>`;
+                <td>${escapeHtml(formatTime(occurredAt))}</td>`;
         }
 
         notificationsBody.prepend(row);
@@ -92,31 +96,35 @@
 
         const row = document.createElement("tr");
         row.setAttribute("data-document-id", payload.documentId);
+        const title = payload.title || payload.document;
+        const subject = payload.subjectName || payload.subject;
+        const teacherName = payload.updatedByTeacherName || payload.teacherUploader;
+        const occurredAt = payload.updatedAtUtc || payload.occurredAtUtc;
         if (mode === "admin") {
             row.innerHTML = `
-                <td>${escapeHtml(payload.document)}</td>
-                <td>${escapeHtml(payload.subject)}</td>
+                <td>${escapeHtml(title)}</td>
+                <td>${escapeHtml(subject)}</td>
                 <td></td>
-                <td>${escapeHtml(payload.teacherUploader)}</td>
-                <td>${escapeHtml(formatTime(payload.occurredAtUtc))}</td>
+                <td>${escapeHtml(teacherName)}</td>
+                <td>${escapeHtml(formatTime(occurredAt))}</td>
                 <td data-document-status>${escapeHtml(payload.status)}</td>
                 <td></td>
                 <td>
                     <div class="btn-group btn-group-sm" role="group">
                         <a class="btn btn-outline-primary" href="/Documents/Details/${payload.documentId}">Xem</a>
-                        <a class="btn btn-outline-primary" href="/Documents/Download/${payload.documentId}">Tai xuong</a>
+                        <a class="btn btn-outline-primary" href="/Documents/Download/${payload.documentId}">Tải xuống</a>
                     </div>
                 </td>`;
         } else {
             row.innerHTML = `
-                <td>${escapeHtml(payload.document)}</td>
-                <td>${escapeHtml(payload.subject)}</td>
+                <td>${escapeHtml(title)}</td>
+                <td>${escapeHtml(subject)}</td>
                 <td></td>
                 <td></td>
                 <td></td>
                 <td data-document-status>${escapeHtml(payload.status)}</td>
                 <td></td>
-                <td>${escapeHtml(formatTime(payload.occurredAtUtc))}</td>
+                <td>${escapeHtml(formatTime(occurredAt))}</td>
                 <td>
                     <div class="d-flex flex-wrap gap-1">
                         <a class="btn btn-sm btn-outline-primary" href="/TeacherDocuments/Details/${payload.documentId}">Xem</a>
@@ -172,7 +180,7 @@
 
         socket.addEventListener("open", function () {
             socket.send(JSON.stringify({ protocol: "json", version: 1 }) + recordSeparator);
-            setStatus("Connected", "text-bg-success");
+            setStatus("Đã kết nối", "text-bg-success");
         });
 
         socket.addEventListener("message", function (event) {
@@ -183,18 +191,18 @@
         });
 
         socket.addEventListener("close", function () {
-            setStatus("Disconnected", "text-bg-secondary");
+            setStatus("Mất kết nối", "text-bg-secondary");
             window.setTimeout(start, 3000);
         });
 
         socket.addEventListener("error", function () {
-            setStatus("Error", "text-bg-danger");
+            setStatus("Lỗi", "text-bg-danger");
         });
     }
 
     async function start() {
         try {
-            setStatus("Connecting", "text-bg-secondary");
+            setStatus("Đang kết nối", "text-bg-secondary");
             const response = await fetch("/hubs/document-processing/negotiate?negotiateVersion=1", {
                 method: "POST",
                 credentials: "same-origin"
@@ -206,7 +214,7 @@
             const negotiate = await response.json();
             connectWebSocket(negotiate.connectionToken || negotiate.connectionId);
         } catch {
-            setStatus("Disconnected", "text-bg-secondary");
+            setStatus("Mất kết nối", "text-bg-secondary");
             window.setTimeout(start, 3000);
         }
     }

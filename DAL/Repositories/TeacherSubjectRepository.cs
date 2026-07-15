@@ -25,6 +25,15 @@ public class TeacherSubjectRepository : ITeacherSubjectRepository
             .ToListAsync(cancellationToken);
     }
 
+    public Task<TeacherSubject?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
+    {
+        return _dbContext.TeacherSubjects
+            .Include(assignment => assignment.Teacher)
+            .Include(assignment => assignment.Subject)
+                .ThenInclude(subject => subject!.Department)
+            .FirstOrDefaultAsync(assignment => assignment.Id == id, cancellationToken);
+    }
+
     public async Task<IReadOnlyList<TeacherSubject>> GetByTeacherAsync(int teacherId, CancellationToken cancellationToken = default)
     {
         return await _dbContext.TeacherSubjects
@@ -47,6 +56,12 @@ public class TeacherSubjectRepository : ITeacherSubjectRepository
     public async Task AddAsync(TeacherSubject teacherSubject, CancellationToken cancellationToken = default)
     {
         _dbContext.TeacherSubjects.Add(teacherSubject);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task DeleteAsync(TeacherSubject teacherSubject, CancellationToken cancellationToken = default)
+    {
+        _dbContext.TeacherSubjects.Remove(teacherSubject);
         await _dbContext.SaveChangesAsync(cancellationToken);
     }
 }

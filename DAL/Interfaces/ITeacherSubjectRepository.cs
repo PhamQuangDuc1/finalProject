@@ -6,9 +6,13 @@ public interface ITeacherSubjectRepository
 {
     Task<IReadOnlyList<TeacherSubject>> GetAllAsync(CancellationToken cancellationToken = default);
 
+    Task<TeacherSubject?> GetByIdAsync(int id, CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<TeacherSubject>> GetByTeacherAsync(int teacherId, CancellationToken cancellationToken = default);
 
     Task<bool> ExistsAsync(int teacherId, int subjectId, CancellationToken cancellationToken = default);
 
     Task AddAsync(TeacherSubject teacherSubject, CancellationToken cancellationToken = default);
+
+    Task DeleteAsync(TeacherSubject teacherSubject, CancellationToken cancellationToken = default);
 }

@@ -5,12 +5,12 @@ namespace finalProject.ViewModels;
 
 public class TeacherAssignmentFormViewModel
 {
-    [Required]
-    [Display(Name = "Teacher")]
+    [Required(ErrorMessage = "Vui lòng chọn giảng viên.")]
+    [Display(Name = "Giảng viên")]
     public int TeacherId { get; set; }
 
-    [Required]
-    [Display(Name = "Subject")]
+    [Required(ErrorMessage = "Vui lòng chọn môn học.")]
+    [Display(Name = "Môn học")]
     public int SubjectId { get; set; }
 
     public IReadOnlyList<SelectListItem> TeacherOptions { get; set; } = Array.Empty<SelectListItem>();

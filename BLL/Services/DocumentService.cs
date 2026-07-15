@@ -12,6 +12,7 @@ namespace BLL.Services;
 public class DocumentService : IDocumentService
 {
     private const int MinimumArchiveDelayDays = 7;
+    private const int MaxEditableContentLength = 200_000;
 
     private static readonly HashSet<string> AllowedExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -113,6 +114,16 @@ public class DocumentService : IDocumentService
         throw new UnauthorizedAccessException("The current user is not allowed to view this document.");
     }
 
+    public async Task<DocumentDto?> GetEditableDocumentForTeacherAsync(int documentId, int teacherId, CancellationToken cancellationToken = default)
+    {
+        var currentUser = new CurrentUserDto { UserId = teacherId, Role = UserRole.Teacher };
+        var document = await GetOwnedTeacherDocumentAsync(currentUser, documentId, cancellationToken);
+
+        await EnsureStoredContentAsync(document, cancellationToken);
+
+        return ToDto(document);
+    }
+
     public async Task<DocumentUploadOptionsDto> GetUploadOptionsForTeacherAsync(CurrentUserDto currentUser, CancellationToken cancellationToken = default)
     {
         AuthorizationGuard.RequireRole(currentUser, UserRole.Teacher);
@@ -191,6 +202,7 @@ public class DocumentService : IDocumentService
             ContentType = document.ContentType,
             FileSize = document.FileSize,
             Status = DocumentStatus.Processing,
+            ContentVersion = 1,
             UploadedAt = DateTime.UtcNow
         };
 
@@ -200,6 +212,7 @@ public class DocumentService : IDocumentService
         {
             await File.WriteAllBytesAsync(filePath, document.FileContent, cancellationToken);
             var extractedText = ExtractText(document.FileContent, extension);
+            entity.ExtractedContent = extractedText;
             var chunks = await _chunkingService.CreateChunksAsync(entity.Id, extractedText, cancellationToken);
 
             entity.Chunks.Clear();
@@ -243,6 +256,76 @@ public class DocumentService : IDocumentService
         int documentId,
         DateTime scheduledArchiveAtUtc,
         CancellationToken cancellationToken = default)
+    public async Task UpdateDocumentContentAsync(
+        int documentId,
+        int teacherId,
+        string title,
+        int subjectId,
+        int? chapterId,
+        string? description,
+        string content,
+        CancellationToken cancellationToken = default)
+    {
+        var currentUser = new CurrentUserDto { UserId = teacherId, Role = UserRole.Teacher };
+        var document = await GetOwnedTeacherDocumentAsync(currentUser, documentId, cancellationToken);
+
+        await ValidateChapterForTeacherSubjectAsync(currentUser, subjectId, chapterId, cancellationToken);
+
+        var normalizedTitle = string.IsNullOrWhiteSpace(title)
+            ? throw new InvalidOperationException("Tiêu đề không được để trống.")
+            : title.Trim();
+        var normalizedContent = NormalizeEditableContent(content);
+        var previousContent = GetWorkingContent(document);
+        var previousVersionNumber = Math.Max(1, document.ContentVersion);
+
+        var now = DateTime.UtcNow;
+        var previousVersion = string.IsNullOrWhiteSpace(previousContent)
+            ? null
+            : new DocumentVersion
+            {
+                DocumentId = document.Id,
+                VersionNumber = previousVersionNumber,
+                Content = previousContent,
+                UpdatedByTeacherId = teacherId,
+                UpdatedAt = now,
+                ChangeNote = "Nội dung trước khi giảng viên chỉnh sửa."
+            };
+
+        document.Title = normalizedTitle;
+        document.SubjectId = subjectId;
+        document.ChapterId = chapterId;
+        document.Description = description;
+        document.EditedContent = normalizedContent;
+        document.HasManualEdits = true;
+        document.ContentUpdatedAt = now;
+        document.ContentUpdatedByTeacherId = teacherId;
+        document.ContentVersion = previousVersionNumber + 1;
+        document.Status = DocumentStatus.Processing;
+        document.ErrorMessage = null;
+        document.UpdatedAt = now;
+
+        try
+        {
+            var chunks = await _chunkingService.CreateChunksAsync(document.Id, normalizedContent, cancellationToken);
+
+            document.Status = DocumentStatus.Indexed;
+            document.ErrorMessage = null;
+            document.UpdatedAt = DateTime.UtcNow;
+
+            await _documentRepository.UpdateContentInTransactionAsync(document, previousVersion, chunks, cancellationToken);
+        }
+        catch (Exception ex) when (ex is not UnauthorizedAccessException)
+        {
+            document.Status = DocumentStatus.Failed;
+            document.ErrorMessage = ex.Message;
+            document.UpdatedAt = DateTime.UtcNow;
+
+            await _documentRepository.UpdateAsync(document, cancellationToken);
+            throw new InvalidOperationException("Không thể cập nhật nội dung tài liệu.", ex);
+        }
+    }
+
+    public async Task ArchiveDocumentAsync(CurrentUserDto currentUser, int documentId, CancellationToken cancellationToken = default)
     {
         var document = await GetOwnedTeacherDocumentAsync(currentUser, documentId, cancellationToken);
 
@@ -280,15 +363,21 @@ public class DocumentService : IDocumentService
 
         try
         {
-            if (!File.Exists(document.FilePath))
+            var workingContent = GetWorkingContent(document);
+            if (string.IsNullOrWhiteSpace(workingContent))
             {
-                throw new FileNotFoundException("The stored document file could not be found.", document.FilePath);
+                if (!File.Exists(document.FilePath))
+                {
+                    throw new FileNotFoundException("The stored document file could not be found.", document.FilePath);
+                }
+
+                var content = await File.ReadAllBytesAsync(document.FilePath, cancellationToken);
+                var extension = Path.GetExtension(document.OriginalFileName);
+                workingContent = ExtractText(content, extension);
+                document.ExtractedContent = workingContent;
             }
 
-            var content = await File.ReadAllBytesAsync(document.FilePath, cancellationToken);
-            var extension = Path.GetExtension(document.OriginalFileName);
-            var extractedText = ExtractText(content, extension);
-            var chunks = await _chunkingService.CreateChunksAsync(document.Id, extractedText, cancellationToken);
+            var chunks = await _chunkingService.CreateChunksAsync(document.Id, workingContent, cancellationToken);
 
             document.Status = DocumentStatus.Indexed;
             document.ErrorMessage = null;
@@ -394,34 +483,87 @@ public class DocumentService : IDocumentService
             UpdatedAtUtc = document.UpdatedAt,
             ArchivedAtUtc = document.ArchivedAt,
             ArchivedByTeacherId = document.ArchivedByTeacherId,
-            ScheduledArchiveAtUtc = document.ScheduledArchiveAt,
-            ScheduledArchiveByTeacherId = document.ScheduledArchiveByTeacherId,
-            ErrorMessage = document.ErrorMessage
+            ErrorMessage = document.ErrorMessage,
+            CurrentContent = GetWorkingContent(document),
+            HasManualEdits = document.HasManualEdits,
+            ContentUpdatedAtUtc = document.ContentUpdatedAt,
+            ContentUpdatedByTeacherId = document.ContentUpdatedByTeacherId,
+            ContentUpdatedByTeacherName = document.ContentUpdatedByTeacher?.FullName ?? string.Empty,
+            ContentVersion = document.ContentVersion,
+            Versions = document.Versions
+                .OrderByDescending(version => version.VersionNumber)
+                .Select(version => new DocumentVersionDto
+                {
+                    Id = version.Id,
+                    VersionNumber = version.VersionNumber,
+                    Content = version.Content,
+                    UpdatedByTeacherId = version.UpdatedByTeacherId,
+                    UpdatedByTeacherName = version.UpdatedByTeacher?.FullName ?? string.Empty,
+                    UpdatedAtUtc = version.UpdatedAt,
+                    ChangeNote = version.ChangeNote
+                })
+                .ToList()
         };
     }
 
-    private async Task ApplyDueScheduledArchivesAsync(IReadOnlyList<Document> documents, CancellationToken cancellationToken)
+    private async Task EnsureStoredContentAsync(Document document, CancellationToken cancellationToken)
     {
-        var dueDocuments = documents
-            .Where(IsScheduledArchiveDue)
-            .ToList();
-
-        foreach (var document in dueDocuments)
+        if (!string.IsNullOrWhiteSpace(document.EditedContent) || !string.IsNullOrWhiteSpace(document.ExtractedContent))
         {
-            document.IsArchived = true;
-            document.Status = DocumentStatus.Archived;
-            document.ArchivedAt = document.ScheduledArchiveAt;
-            document.ArchivedByTeacherId = document.ScheduledArchiveByTeacherId;
-            document.UpdatedAt = DateTime.UtcNow;
-            await _documentRepository.UpdateAsync(document, cancellationToken);
+            return;
         }
+
+        var contentFromChunks = BuildContentFromChunks(document);
+        if (string.IsNullOrWhiteSpace(contentFromChunks))
+        {
+            return;
+        }
+
+        document.ExtractedContent = contentFromChunks;
+        document.UpdatedAt = DateTime.UtcNow;
+
+        await _documentRepository.UpdateAsync(document, cancellationToken);
     }
 
-    private static bool IsScheduledArchiveDue(Document document)
+    private static string NormalizeEditableContent(string content)
     {
-        return !document.IsArchived
-            && document.ScheduledArchiveAt.HasValue
-            && document.ScheduledArchiveAt.Value <= DateTime.UtcNow;
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            throw new InvalidOperationException("Nội dung tài liệu không được để trống.");
+        }
+
+        var normalized = content.Trim();
+        if (normalized.Length > MaxEditableContentLength)
+        {
+            throw new InvalidOperationException($"Nội dung tài liệu không được vượt quá {MaxEditableContentLength:N0} ký tự.");
+        }
+
+        return normalized;
+    }
+
+    private static string GetWorkingContent(Document document)
+    {
+        if (!string.IsNullOrWhiteSpace(document.EditedContent))
+        {
+            return document.EditedContent;
+        }
+
+        if (!string.IsNullOrWhiteSpace(document.ExtractedContent))
+        {
+            return document.ExtractedContent;
+        }
+
+        return BuildContentFromChunks(document);
+    }
+
+    private static string BuildContentFromChunks(Document document)
+    {
+        return string.Join(
+            $"{Environment.NewLine}{Environment.NewLine}",
+            document.Chunks
+                .OrderBy(chunk => chunk.ChunkIndex)
+                .Select(chunk => chunk.Content)
+                .Where(content => !string.IsNullOrWhiteSpace(content)));
     }
 
     private static string ExtractText(byte[] content, string extension)

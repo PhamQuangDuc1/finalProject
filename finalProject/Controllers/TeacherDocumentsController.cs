@@ -155,9 +155,10 @@ public class TeacherDocumentsController : Controller
     public async Task<IActionResult> Edit(int id, CancellationToken cancellationToken)
     {
         DocumentDto? document;
+        var currentUser = GetCurrentUser();
         try
         {
-            document = await _documentService.GetDocumentByIdAsync(GetCurrentUser(), id, cancellationToken);
+            document = await _documentService.GetEditableDocumentForTeacherAsync(id, currentUser.UserId, cancellationToken);
         }
         catch (UnauthorizedAccessException)
         {
@@ -175,7 +176,11 @@ public class TeacherDocumentsController : Controller
             SubjectId = document.SubjectId,
             ChapterId = document.ChapterId,
             Title = document.Title,
-            Description = document.Description
+            Description = document.Description,
+            Content = document.CurrentContent,
+            OriginalFileName = document.FileName,
+            CurrentStatus = document.Status,
+            ContentVersion = document.ContentVersion
         }, cancellationToken));
     }
 
@@ -191,14 +196,15 @@ public class TeacherDocumentsController : Controller
         var currentUser = GetCurrentUser();
         try
         {
-            await _documentService.UpdateDocumentAsync(currentUser, new UpdateDocumentDto
-            {
-                Id = model.Id,
-                SubjectId = model.SubjectId,
-                ChapterId = model.ChapterId,
-                Title = model.Title,
-                Description = model.Description
-            }, cancellationToken);
+            await _documentService.UpdateDocumentContentAsync(
+                model.Id,
+                currentUser.UserId,
+                model.Title,
+                model.SubjectId,
+                model.ChapterId,
+                model.Description,
+                model.Content,
+                cancellationToken);
         }
         catch (UnauthorizedAccessException)
         {
@@ -210,9 +216,9 @@ public class TeacherDocumentsController : Controller
             return View(await BuildEditViewModelAsync(model, cancellationToken));
         }
 
-        await BroadcastDocumentEventAsync("DocumentUpdated", "Updated", model.Id, currentUser, cancellationToken);
+        await BroadcastDocumentEventAsync("DocumentUpdated", "Cập nhật", model.Id, currentUser, cancellationToken);
 
-        TempData["StatusMessage"] = "Da cap nhat tai lieu.";
+        TempData["StatusMessage"] = "Đã cập nhật nội dung tài liệu thành công.";
         return RedirectToAction(nameof(Details), new { id = model.Id });
     }
 
@@ -366,6 +372,10 @@ public class TeacherDocumentsController : Controller
             TeacherUploader = document.UploadedByTeacherName,
             Document = document.Title,
             Subject = document.SubjectName,
+            Title = document.Title,
+            SubjectName = document.SubjectName,
+            UpdatedByTeacherName = document.UploadedByTeacherName,
+            UpdatedAtUtc = DateTime.UtcNow,
             Action = action,
             Status = document.Status,
             OccurredAtUtc = DateTime.UtcNow
