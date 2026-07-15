@@ -256,6 +256,27 @@ public class DocumentService : IDocumentService
         int documentId,
         DateTime scheduledArchiveAtUtc,
         CancellationToken cancellationToken = default)
+    {
+        var document = await GetOwnedTeacherDocumentAsync(currentUser, documentId, cancellationToken);
+
+        if (document.IsArchived)
+        {
+            return;
+        }
+
+        var minimumArchiveAt = DateTime.UtcNow.AddDays(MinimumArchiveDelayDays);
+        if (scheduledArchiveAtUtc < minimumArchiveAt)
+        {
+            throw new InvalidOperationException("Thoi gian an tai lieu phai cach hien tai it nhat 7 ngay.");
+        }
+
+        document.ScheduledArchiveAt = scheduledArchiveAtUtc;
+        document.ScheduledArchiveByTeacherId = currentUser.UserId;
+        document.UpdatedAt = DateTime.UtcNow;
+
+        await _documentRepository.UpdateAsync(document, cancellationToken);
+    }
+
     public async Task UpdateDocumentContentAsync(
         int documentId,
         int teacherId,
@@ -323,28 +344,6 @@ public class DocumentService : IDocumentService
             await _documentRepository.UpdateAsync(document, cancellationToken);
             throw new InvalidOperationException("Không thể cập nhật nội dung tài liệu.", ex);
         }
-    }
-
-    public async Task ArchiveDocumentAsync(CurrentUserDto currentUser, int documentId, CancellationToken cancellationToken = default)
-    {
-        var document = await GetOwnedTeacherDocumentAsync(currentUser, documentId, cancellationToken);
-
-        if (document.IsArchived)
-        {
-            return;
-        }
-
-        var minimumArchiveAt = DateTime.UtcNow.AddDays(MinimumArchiveDelayDays);
-        if (scheduledArchiveAtUtc < minimumArchiveAt)
-        {
-            throw new InvalidOperationException("Thoi gian an tai lieu phai cach hien tai it nhat 7 ngay.");
-        }
-
-        document.ScheduledArchiveAt = scheduledArchiveAtUtc;
-        document.ScheduledArchiveByTeacherId = currentUser.UserId;
-        document.UpdatedAt = DateTime.UtcNow;
-
-        await _documentRepository.UpdateAsync(document, cancellationToken);
     }
 
     public async Task ReindexDocumentAsync(CurrentUserDto currentUser, int documentId, CancellationToken cancellationToken = default)
@@ -444,6 +443,35 @@ public class DocumentService : IDocumentService
         }
     }
 
+    private async Task ApplyDueScheduledArchivesAsync(IEnumerable<Document> documents, CancellationToken cancellationToken)
+    {
+        var now = DateTime.UtcNow;
+
+        foreach (var document in documents.Where(document => IsScheduledArchiveDue(document, now)))
+        {
+            document.IsArchived = true;
+            document.ArchivedAt = now;
+            document.ArchivedByTeacherId = document.ScheduledArchiveByTeacherId;
+            document.ScheduledArchiveAt = null;
+            document.ScheduledArchiveByTeacherId = null;
+            document.UpdatedAt = now;
+
+            await _documentRepository.UpdateAsync(document, cancellationToken);
+        }
+    }
+
+    private static bool IsScheduledArchiveDue(Document document)
+    {
+        return IsScheduledArchiveDue(document, DateTime.UtcNow);
+    }
+
+    private static bool IsScheduledArchiveDue(Document document, DateTime now)
+    {
+        return !document.IsArchived
+            && document.ScheduledArchiveAt.HasValue
+            && document.ScheduledArchiveAt.Value <= now;
+    }
+
     private static DocumentDto ToDto(Document document)
     {
         return new DocumentDto
@@ -483,6 +511,8 @@ public class DocumentService : IDocumentService
             UpdatedAtUtc = document.UpdatedAt,
             ArchivedAtUtc = document.ArchivedAt,
             ArchivedByTeacherId = document.ArchivedByTeacherId,
+            ScheduledArchiveAtUtc = document.ScheduledArchiveAt,
+            ScheduledArchiveByTeacherId = document.ScheduledArchiveByTeacherId,
             ErrorMessage = document.ErrorMessage,
             CurrentContent = GetWorkingContent(document),
             HasManualEdits = document.HasManualEdits,

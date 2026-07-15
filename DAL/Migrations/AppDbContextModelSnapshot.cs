@@ -178,6 +178,11 @@ namespace DAL.Migrations
                     b.Property<int?>("ChapterId")
                         .HasColumnType("int");
 
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
                     b.Property<DateTime?>("ContentUpdatedAt")
                         .HasColumnType("datetime2");
 
@@ -189,21 +194,16 @@ namespace DAL.Migrations
                         .HasColumnType("int")
                         .HasDefaultValue(1);
 
-                    b.Property<string>("ContentType")
-                        .IsRequired()
-                        .HasMaxLength(120)
-                        .HasColumnType("nvarchar(120)");
-
                     b.Property<string>("Description")
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
 
+                    b.Property<string>("EditedContent")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("ErrorMessage")
                         .HasMaxLength(2000)
                         .HasColumnType("nvarchar(2000)");
-
-                    b.Property<string>("EditedContent")
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ExtractedContent")
                         .HasColumnType("nvarchar(max)");
@@ -216,10 +216,10 @@ namespace DAL.Migrations
                     b.Property<long>("FileSize")
                         .HasColumnType("bigint");
 
-                    b.Property<bool>("IsArchived")
+                    b.Property<bool>("HasManualEdits")
                         .HasColumnType("bit");
 
-                    b.Property<bool>("HasManualEdits")
+                    b.Property<bool>("IsArchived")
                         .HasColumnType("bit");
 
                     b.Property<string>("OriginalFileName")
@@ -266,6 +266,8 @@ namespace DAL.Migrations
 
                     b.HasIndex("ContentUpdatedByTeacherId");
 
+                    b.HasIndex("ScheduledArchiveByTeacherId");
+
                     b.HasIndex("UploadedByTeacherId");
 
                     b.HasIndex("SubjectId", "UploadedByTeacherId");
@@ -278,44 +280,6 @@ namespace DAL.Migrations
                         });
 
                     b.HasAnnotation("SqlServer:UseSqlOutputClause", false);
-                });
-
-            modelBuilder.Entity("DAL.Entities.DocumentVersion", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("ChangeNote")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<string>("Content")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("DocumentId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("UpdatedByTeacherId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("VersionNumber")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UpdatedByTeacherId");
-
-                    b.HasIndex("DocumentId", "VersionNumber")
-                        .IsUnique();
-
-                    b.ToTable("DocumentVersions");
                 });
 
             modelBuilder.Entity("DAL.Entities.DocumentChunk", b =>
@@ -357,6 +321,44 @@ namespace DAL.Migrations
                         .IsUnique();
 
                     b.ToTable("DocumentChunks");
+                });
+
+            modelBuilder.Entity("DAL.Entities.DocumentVersion", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ChangeNote")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("DocumentId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("UpdatedByTeacherId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("VersionNumber")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UpdatedByTeacherId");
+
+                    b.HasIndex("DocumentId", "VersionNumber")
+                        .IsUnique();
+
+                    b.ToTable("DocumentVersions");
                 });
 
             modelBuilder.Entity("DAL.Entities.Subject", b =>
@@ -662,6 +664,11 @@ namespace DAL.Migrations
                         .HasForeignKey("ContentUpdatedByTeacherId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("DAL.Entities.User", "ScheduledArchiveByTeacher")
+                        .WithMany("ScheduledArchiveDocuments")
+                        .HasForeignKey("ScheduledArchiveByTeacherId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("DAL.Entities.Subject", "Subject")
                         .WithMany("Documents")
                         .HasForeignKey("SubjectId")
@@ -680,9 +687,22 @@ namespace DAL.Migrations
 
                     b.Navigation("ContentUpdatedByTeacher");
 
+                    b.Navigation("ScheduledArchiveByTeacher");
+
                     b.Navigation("Subject");
 
                     b.Navigation("UploadedByTeacher");
+                });
+
+            modelBuilder.Entity("DAL.Entities.DocumentChunk", b =>
+                {
+                    b.HasOne("DAL.Entities.Document", "Document")
+                        .WithMany("Chunks")
+                        .HasForeignKey("DocumentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Document");
                 });
 
             modelBuilder.Entity("DAL.Entities.DocumentVersion", b =>
@@ -702,17 +722,6 @@ namespace DAL.Migrations
                     b.Navigation("Document");
 
                     b.Navigation("UpdatedByTeacher");
-                });
-
-            modelBuilder.Entity("DAL.Entities.DocumentChunk", b =>
-                {
-                    b.HasOne("DAL.Entities.Document", "Document")
-                        .WithMany("Chunks")
-                        .HasForeignKey("DocumentId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Document");
                 });
 
             modelBuilder.Entity("DAL.Entities.Subject", b =>

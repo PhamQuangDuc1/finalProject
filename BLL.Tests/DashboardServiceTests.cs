@@ -56,6 +56,12 @@ public class DashboardServiceTests
         public Task UpdateAsync(Document document, CancellationToken cancellationToken = default) => throw new NotImplementedException();
 
         public Task ReplaceChunksInTransactionAsync(Document document, IReadOnlyList<DocumentChunk> chunks, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+
+        public Task UpdateContentInTransactionAsync(
+            Document document,
+            DocumentVersion? previousVersion,
+            IReadOnlyList<DocumentChunk> chunks,
+            CancellationToken cancellationToken = default) => throw new NotImplementedException();
     }
 
     private sealed class FakeDepartmentRepository : IDepartmentRepository

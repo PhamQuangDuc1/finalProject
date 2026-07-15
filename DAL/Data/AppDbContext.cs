@@ -226,7 +226,8 @@ public class AppDbContext : DbContext
             entity.HasOne(document => document.ScheduledArchiveByTeacher)
                 .WithMany(user => user.ScheduledArchiveDocuments)
                 .HasForeignKey(document => document.ScheduledArchiveByTeacherId)
-                
+                .OnDelete(DeleteBehavior.Restrict);
+
             entity.HasOne(document => document.ContentUpdatedByTeacher)
                 .WithMany(user => user.ContentUpdatedDocuments)
                 .HasForeignKey(document => document.ContentUpdatedByTeacherId)
