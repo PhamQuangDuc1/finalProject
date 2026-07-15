@@ -382,6 +382,11 @@ public class DocumentServiceTests
             return Task.FromResult<IReadOnlyList<TeacherSubject>>(Array.Empty<TeacherSubject>());
         }
 
+        public Task<TeacherSubject?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult<TeacherSubject?>(null);
+        }
+
         public Task<IReadOnlyList<TeacherSubject>> GetByTeacherAsync(int teacherId, CancellationToken cancellationToken = default)
         {
             var assignments = _assignedSubjectIds
@@ -410,6 +415,11 @@ public class DocumentServiceTests
         }
 
         public Task AddAsync(TeacherSubject teacherSubject, CancellationToken cancellationToken = default)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task DeleteAsync(TeacherSubject teacherSubject, CancellationToken cancellationToken = default)
         {
             throw new NotImplementedException();
         }

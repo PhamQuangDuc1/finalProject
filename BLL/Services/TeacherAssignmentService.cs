@@ -79,4 +79,14 @@ public class TeacherAssignmentService : ITeacherAssignmentService
     {
         return _subjectService.AssignTeacherToSubjectAsync(currentUser, teacherId, subjectId, cancellationToken);
     }
+
+    public async Task RemoveTeacherFromSubjectAsync(CurrentUserDto currentUser, int assignmentId, CancellationToken cancellationToken = default)
+    {
+        AuthorizationGuard.RequireRole(currentUser, UserRole.Admin);
+
+        var assignment = await _teacherSubjectRepository.GetByIdAsync(assignmentId, cancellationToken)
+            ?? throw new InvalidOperationException("Teacher assignment was not found.");
+
+        await _teacherSubjectRepository.DeleteAsync(assignment, cancellationToken);
+    }
 }

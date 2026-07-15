@@ -11,6 +11,13 @@
     </div>
 </div>
 
+@if (TempData["SuccessMessage"] is string successMessage)
+{
+    <div class="alert alert-success" role="alert">
+        @successMessage
+    </div>
+}
+
 <section class="card-panel mb-4">
     <h2 class="section-title">Gán giảng viên vào môn học</h2>
     <form asp-action="Assign" method="post" class="row g-3 align-items-end">
@@ -37,6 +44,9 @@
 
 <section class="card-panel">
     <h2 class="section-title">Danh sách phân công</h2>
+    <p class="text-muted">
+        Khi hủy phân công, giảng viên sẽ không thể đăng tải tài liệu mới cho môn học này. Các tài liệu đã đăng trước đó vẫn được giữ lại.
+    </p>
     <div class="table-responsive">
         <table class="table table-striped align-middle mb-0">
             <thead>
@@ -45,13 +55,14 @@
                     <th>Môn học</th>
                     <th>Bộ môn</th>
                     <th>Ngày phân công</th>
+                    <th>Thao tác</th>
                 </tr>
             </thead>
             <tbody>
             @if (Model.Assignments.Count == 0)
             {
                 <tr>
-                    <td colspan="4" class="text-muted">Chưa có phân công nào.</td>
+                    <td colspan="5" class="text-muted">Chưa có phân công nào.</td>
                 </tr>
             }
             else
@@ -63,6 +74,13 @@
                         <td>@assignment.SubjectName</td>
                         <td>@assignment.DepartmentName</td>
                         <td>@assignment.AssignedAt.ToLocalTime().ToString("g")</td>
+                        <td>
+                            <form asp-action="RemoveAssignment" method="post" class="d-inline">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="id" value="@assignment.Id" />
+                                <button type="submit" class="btn btn-danger btn-sm">Hủy phân công</button>
+                            </form>
+                        </td>
                     </tr>
                 }
             }
