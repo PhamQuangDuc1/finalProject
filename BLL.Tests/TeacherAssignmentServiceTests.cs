@@ -56,6 +56,33 @@ public class TeacherAssignmentServiceTests
             999));
     }
 
+    [Fact]
+    public async Task GetSubjectOptionsAsync_IncludesSubjectImmediatelyAfterAssignmentRemoval()
+    {
+        var teacher = new User { Id = 2, FullName = "Teacher A", Role = UserRole.Teacher, IsActive = true };
+        var subject = new Subject { Id = 10, Code = "PRN222", Name = "PRN222", IsActive = true };
+        var assignment = new TeacherSubject
+        {
+            Id = 7,
+            TeacherId = teacher.Id,
+            Teacher = teacher,
+            SubjectId = subject.Id,
+            Subject = subject
+        };
+        var repository = new FakeTeacherSubjectRepository(new[] { assignment });
+        var subjectService = new FakeSubjectService(new[]
+        {
+            new SubjectDto { Id = 10, Code = "PRN222", Name = "PRN222", IsActive = true }
+        });
+        var service = new TeacherAssignmentService(subjectService, repository, new FakeUserRepository());
+
+        await service.RemoveTeacherFromSubjectAsync(new CurrentUserDto { UserId = 1, Role = UserRole.Admin }, assignment.Id);
+
+        var options = await service.GetSubjectOptionsAsync();
+
+        Assert.Contains(options, option => option.Id == 10);
+    }
+
     private static TeacherAssignmentService CreateService(FakeTeacherSubjectRepository repository)
     {
         return new TeacherAssignmentService(new FakeSubjectService(), repository, new FakeUserRepository());
@@ -106,9 +133,16 @@ public class TeacherAssignmentServiceTests
 
     private sealed class FakeSubjectService : ISubjectService
     {
+        private readonly IReadOnlyList<SubjectDto> _subjects;
+
+        public FakeSubjectService(IReadOnlyList<SubjectDto>? subjects = null)
+        {
+            _subjects = subjects ?? Array.Empty<SubjectDto>();
+        }
+
         public Task<IReadOnlyList<SubjectDto>> GetSubjectsAsync(CancellationToken cancellationToken = default)
         {
-            return Task.FromResult<IReadOnlyList<SubjectDto>>(Array.Empty<SubjectDto>());
+            return Task.FromResult(_subjects);
         }
 
         public Task<SubjectDto?> GetSubjectByIdAsync(int id, CancellationToken cancellationToken = default)

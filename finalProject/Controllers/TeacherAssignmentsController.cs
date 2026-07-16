@@ -64,7 +64,15 @@ public class TeacherAssignmentsController : Controller
             await _teacherAssignmentService.RemoveTeacherFromSubjectAsync(GetCurrentUser(), id, cancellationToken);
             TempData["SuccessMessage"] = "Đã hủy phân công giảng viên khỏi môn học.";
 
-            return RedirectToAction(nameof(Index));
+            return View(nameof(Index), new TeacherAssignmentsIndexViewModel
+            {
+                Form = new TeacherAssignmentFormViewModel
+                {
+                    TeacherOptions = await GetTeacherOptionsAsync(cancellationToken),
+                    SubjectOptions = await GetSubjectOptionsAsync(cancellationToken)
+                },
+                Assignments = await _teacherAssignmentService.GetAssignmentsAsync(cancellationToken)
+            });
         }
         catch (InvalidOperationException)
         {

@@ -8,6 +8,8 @@ public interface IDocumentRepository
 
     Task<IReadOnlyList<Document>> GetByTeacherAsync(int teacherId, CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<Document>> GetBySubjectIdsAsync(IReadOnlyCollection<int> subjectIds, CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<Document>> GetIndexedActiveAsync(CancellationToken cancellationToken = default);
 
     Task<Document?> GetByIdAsync(int id, CancellationToken cancellationToken = default);

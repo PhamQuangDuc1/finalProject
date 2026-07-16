@@ -562,8 +562,7 @@ a {
   white-space: nowrap;
 }
 
-.studymate-contact-pill:hover,
-.studymate-feature-pill:hover {
+.studymate-contact-pill:hover {
   border-color: rgba(37, 99, 235, 0.38);
   color: #1d4ed8;
   transform: translateY(-1px);
@@ -584,11 +583,6 @@ a {
   width: max-content;
 }
 
-.studymate-marquee:hover .studymate-marquee-track,
-.studymate-marquee.is-paused .studymate-marquee-track {
-  animation-play-state: paused;
-}
-
 .studymate-feature-pill {
   min-height: 46px;
 }
@@ -603,11 +597,6 @@ a {
   justify-content: center;
   transition: background-color 180ms ease, color 180ms ease;
   width: 26px;
-}
-
-.studymate-feature-pill:hover .studymate-feature-icon {
-  background: #dbeafe;
-  color: #1d4ed8;
 }
 
 .studymate-feature-icon svg {

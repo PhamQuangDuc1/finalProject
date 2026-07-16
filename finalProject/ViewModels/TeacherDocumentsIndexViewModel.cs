@@ -16,6 +16,8 @@ public class TeacherDocumentsIndexViewModel
 
     public string? Search { get; set; }
 
+    public bool CanManageDocuments { get; set; }
+
     public IReadOnlyList<SelectListItem> SubjectOptions { get; set; } = Array.Empty<SelectListItem>();
 
     public IReadOnlyList<SelectListItem> StatusOptions { get; set; } = Array.Empty<SelectListItem>();

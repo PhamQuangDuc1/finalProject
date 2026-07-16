@@ -101,6 +101,41 @@ public class DocumentServiceTests
     }
 
     [Fact]
+    public async Task GetDocumentsForTeacherAsync_ReturnsDocumentsForAssignedSubjects()
+    {
+        var documents = new[]
+        {
+            CreateDocument(1, 5, DocumentStatus.Indexed, false, "Shared Subject", 10, "PRN222", "Software Engineering", 1),
+            CreateDocument(2, 5, DocumentStatus.Indexed, false, "Other Subject", 11, "SWE201", "Software Engineering", 1)
+        };
+        var service = new DocumentService(
+            new FakeDocumentRepository(documents),
+            new FakeTeacherSubjectRepository(assignedSubjectIds: new[] { 10 }),
+            new FakeChunkingService());
+
+        var result = await service.GetDocumentsForTeacherAsync(new CurrentUserDto { UserId = 2, Role = UserRole.Teacher });
+
+        var document = Assert.Single(result);
+        Assert.Equal(1, document.Id);
+        Assert.Equal(5, document.UploadedByTeacherId);
+    }
+
+    [Fact]
+    public async Task GetDocumentByIdAsync_AllowsAssignedTeacherToViewSubjectDocument()
+    {
+        var document = CreateDocument(1, 5, DocumentStatus.Indexed, false, "Shared Subject", 10, "PRN222", "Software Engineering", 1);
+        var service = new DocumentService(
+            new FakeDocumentRepository(new[] { document }),
+            new FakeTeacherSubjectRepository(assignedSubjectIds: new[] { 10 }),
+            new FakeChunkingService());
+
+        var result = await service.GetDocumentByIdAsync(new CurrentUserDto { UserId = 2, Role = UserRole.Teacher }, document.Id);
+
+        Assert.NotNull(result);
+        Assert.Equal(document.Id, result.Id);
+    }
+
+    [Fact]
     public async Task UploadDocumentAsync_IndexesChunksUsingSystemSetting_WhenTeacherIsAssigned()
     {
         var repository = new FakeDocumentRepository(Array.Empty<Document>());
@@ -133,6 +168,112 @@ public class DocumentServiceTests
     }
 
     [Fact]
+    public async Task UploadDocumentAsync_Throws_WhenAssignedTeacherIsNotDepartmentManager()
+    {
+        var service = new DocumentService(
+            new FakeDocumentRepository(Array.Empty<Document>()),
+            new FakeTeacherSubjectRepository(assignedSubjectIds: new[] { 10 }, managerTeacherId: 5),
+            new FakeChunkingService());
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => service.UploadDocumentAsync(
+            new CurrentUserDto { UserId = 2, Role = UserRole.Teacher },
+            new CreateDocumentDto
+            {
+                SubjectId = 10,
+                UploadedByTeacherId = 2,
+                Title = "Forbidden",
+                FileName = "forbidden.pdf",
+                ContentType = "application/pdf",
+                FileContent = "content"u8.ToArray(),
+                StorageRootPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"))
+            }));
+    }
+
+    [Fact]
+    public async Task UploadDocumentAsync_AllowsDepartmentManagerForManagedSubject()
+    {
+        var repository = new FakeDocumentRepository(Array.Empty<Document>());
+        var service = new DocumentService(
+            repository,
+            new FakeTeacherSubjectRepository(assignedSubjectIds: new[] { 10 }, managerTeacherId: 2),
+            new FakeChunkingService());
+
+        var documentId = await service.UploadDocumentAsync(
+            new CurrentUserDto { UserId = 2, Role = UserRole.Teacher },
+            new CreateDocumentDto
+            {
+                SubjectId = 10,
+                UploadedByTeacherId = 2,
+                Title = "Allowed",
+                FileName = "allowed.pdf",
+                ContentType = "application/pdf",
+                FileSize = 7,
+                FileContent = "content"u8.ToArray(),
+                StorageRootPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"))
+            });
+
+        Assert.True(documentId > 0);
+        Assert.Single(repository.SavedDocuments);
+    }
+
+    [Fact]
+    public async Task GetUploadOptionsForTeacherAsync_ReturnsAllSubjectsInManagedDepartments()
+    {
+        var subjects = new[]
+        {
+            CreateManagedSubject(10, "PRN222", "Lập trình .NET", managerTeacherId: 2),
+            CreateManagedSubject(11, "SWT301", "Kiểm thử phần mềm", managerTeacherId: 2),
+            CreateManagedSubject(12, "DBI202", "Cơ sở dữ liệu", managerTeacherId: 3)
+        };
+        var service = new DocumentService(
+            new FakeDocumentRepository(Array.Empty<Document>()),
+            new FakeTeacherSubjectRepository(assignedSubjectIds: new[] { 10 }, managerTeacherId: 2),
+            new FakeSubjectRepository(subjects),
+            new FakeChunkingService());
+
+        var options = await service.GetUploadOptionsForTeacherAsync(new CurrentUserDto { UserId = 2, Role = UserRole.Teacher });
+
+        Assert.Equal(new[] { 10, 11 }, options.Subjects.Select(subject => subject.Id).OrderBy(id => id));
+        Assert.Contains(options.Chapters, chapter => chapter.SubjectId == 10);
+        Assert.Contains(options.Chapters, chapter => chapter.SubjectId == 11);
+        Assert.DoesNotContain(options.Chapters, chapter => chapter.SubjectId == 12);
+    }
+
+    [Fact]
+    public async Task UploadDocumentAsync_CreatesChapter_WhenChapterNameIsNewForSubject()
+    {
+        var subject = CreateManagedSubject(10, "PRN222", "Lập trình .NET", managerTeacherId: 2);
+        subject.Chapters.Clear();
+        var subjectRepository = new FakeSubjectRepository(new[] { subject });
+        var repository = new FakeDocumentRepository(Array.Empty<Document>());
+        var service = new DocumentService(
+            repository,
+            new FakeTeacherSubjectRepository(assignedSubjectIds: new[] { 10 }, managerTeacherId: 2),
+            subjectRepository,
+            new FakeChunkingService());
+
+        await service.UploadDocumentAsync(
+            new CurrentUserDto { UserId = 2, Role = UserRole.Teacher },
+            new CreateDocumentDto
+            {
+                SubjectId = 10,
+                UploadedByTeacherId = 2,
+                Title = "New chapter upload",
+                ChapterName = "Chương 2",
+                FileName = "chapter.pdf",
+                ContentType = "application/pdf",
+                FileContent = "content for chapter"u8.ToArray(),
+                StorageRootPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"))
+            });
+
+        var chapter = Assert.Single(subject.Chapters);
+        Assert.Equal("Chương 2", chapter.Name);
+        Assert.Equal(1, chapter.OrderIndex);
+        Assert.Equal(chapter.Id, Assert.Single(repository.SavedDocuments).ChapterId);
+        Assert.Equal(1, subjectRepository.UpdateCalls);
+    }
+
+    [Fact]
     public async Task UploadDocumentAsync_Throws_WhenTeacherUploadsToUnassignedSubject()
     {
         var service = new DocumentService(
@@ -148,6 +289,29 @@ public class DocumentServiceTests
                 UploadedByTeacherId = 2,
                 Title = "Forbidden",
                 FileName = "forbidden.pdf",
+                ContentType = "application/pdf",
+                FileContent = "content"u8.ToArray(),
+                StorageRootPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"))
+            }));
+    }
+
+    [Fact]
+    public async Task UploadDocumentAsync_Throws_WhenChapterDoesNotBelongToSelectedSubject()
+    {
+        var service = new DocumentService(
+            new FakeDocumentRepository(Array.Empty<Document>()),
+            new FakeTeacherSubjectRepository(assignedSubjectIds: new[] { 10 }, managerTeacherId: 2),
+            new FakeChunkingService());
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.UploadDocumentAsync(
+            new CurrentUserDto { UserId = 2, Role = UserRole.Teacher },
+            new CreateDocumentDto
+            {
+                SubjectId = 10,
+                ChapterId = 999,
+                UploadedByTeacherId = 2,
+                Title = "Wrong chapter",
+                FileName = "wrong.pdf",
                 ContentType = "application/pdf",
                 FileContent = "content"u8.ToArray(),
                 StorageRootPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"))
@@ -227,6 +391,18 @@ public class DocumentServiceTests
     }
 
     [Fact]
+    public async Task GetEditableDocumentForTeacherAsync_Throws_WhenTeacherIsNotDepartmentManager()
+    {
+        var document = CreateDocument(1, 2, DocumentStatus.Indexed, false, "Owned", 10, "PRN222", "Software Engineering", 1);
+        var service = new DocumentService(
+            new FakeDocumentRepository(new[] { document }),
+            new FakeTeacherSubjectRepository(assignedSubjectIds: new[] { 10 }, managerTeacherId: 5),
+            new FakeChunkingService());
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => service.GetEditableDocumentForTeacherAsync(document.Id, 2));
+    }
+
+    [Fact]
     public async Task UpdateDocumentContentAsync_ReplacesChunksAndStoresManualEdit()
     {
         var storagePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.pdf");
@@ -264,6 +440,35 @@ public class DocumentServiceTests
         Assert.Single(document.Versions);
         Assert.Equal(1, document.Versions.Single().VersionNumber);
         Assert.Equal("old extracted content", document.Versions.Single().Content);
+    }
+
+    [Fact]
+    public async Task UpdateDocumentContentAsync_CreatesChapter_WhenChapterNameIsNewForSubject()
+    {
+        var document = CreateDocument(1, 2, DocumentStatus.Indexed, false, "Owned", 10, "PRN222", "Software Engineering", 1);
+        var subject = CreateManagedSubject(10, "PRN222", "Lập trình .NET", managerTeacherId: 2);
+        subject.Chapters.Clear();
+        var subjectRepository = new FakeSubjectRepository(new[] { subject });
+        var service = new DocumentService(
+            new FakeDocumentRepository(new[] { document }),
+            new FakeTeacherSubjectRepository(assignedSubjectIds: new[] { 10 }, managerTeacherId: 2),
+            subjectRepository,
+            new FakeChunkingService());
+
+        await service.UpdateDocumentContentAsync(
+            document.Id,
+            teacherId: 2,
+            title: "Updated title",
+            subjectId: 10,
+            chapterId: null,
+            description: null,
+            content: "updated content",
+            chapterName: "Chương mới");
+
+        var chapter = Assert.Single(subject.Chapters);
+        Assert.Equal("Chương mới", chapter.Name);
+        Assert.Equal(chapter.Id, document.ChapterId);
+        Assert.Equal(1, subjectRepository.UpdateCalls);
     }
 
     [Fact]
@@ -372,6 +577,22 @@ public class DocumentServiceTests
         };
     }
 
+    private static Subject CreateManagedSubject(int id, string code, string name, int managerTeacherId)
+    {
+        return new Subject
+        {
+            Id = id,
+            Code = code,
+            Name = name,
+            IsActive = true,
+            Department = new Department { ManagerTeacherId = managerTeacherId },
+            Chapters = new List<Chapter>
+            {
+                new() { Id = id * 100 + 1, SubjectId = id, Name = "Chapter 1" }
+            }
+        };
+    }
+
     private static int GetIntProperty(object value, string propertyName)
     {
         var property = value.GetType().GetProperty(propertyName);
@@ -409,6 +630,11 @@ public class DocumentServiceTests
         public Task<IReadOnlyList<Document>> GetByTeacherAsync(int teacherId, CancellationToken cancellationToken = default)
         {
             return Task.FromResult<IReadOnlyList<Document>>(_documents.Where(document => document.UploadedByTeacherId == teacherId).ToList());
+        }
+
+        public Task<IReadOnlyList<Document>> GetBySubjectIdsAsync(IReadOnlyCollection<int> subjectIds, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult<IReadOnlyList<Document>>(_documents.Where(document => subjectIds.Contains(document.SubjectId)).ToList());
         }
 
         public Task<IReadOnlyList<Document>> GetIndexedActiveAsync(CancellationToken cancellationToken = default)
@@ -474,10 +700,12 @@ public class DocumentServiceTests
     private sealed class FakeTeacherSubjectRepository : ITeacherSubjectRepository
     {
         private readonly HashSet<int> _assignedSubjectIds;
+        private readonly int? _managerTeacherId;
 
-        public FakeTeacherSubjectRepository(IEnumerable<int>? assignedSubjectIds = null)
+        public FakeTeacherSubjectRepository(IEnumerable<int>? assignedSubjectIds = null, int? managerTeacherId = null)
         {
             _assignedSubjectIds = assignedSubjectIds?.ToHashSet() ?? new HashSet<int> { 10 };
+            _managerTeacherId = managerTeacherId;
         }
 
         public Task<IReadOnlyList<TeacherSubject>> GetAllAsync(CancellationToken cancellationToken = default)
@@ -500,7 +728,10 @@ public class DocumentServiceTests
                     Subject = new Subject
                     {
                         Id = subjectId,
+                        Code = $"SUB{subjectId}",
+                        Name = $"Subject {subjectId}",
                         IsActive = true,
+                        Department = new Department { ManagerTeacherId = _managerTeacherId ?? teacherId },
                         Chapters = new List<Chapter>
                         {
                             new() { Id = subjectId * 100 + 1, SubjectId = subjectId, Name = "Chapter 1" }
@@ -526,6 +757,44 @@ public class DocumentServiceTests
         {
             throw new NotImplementedException();
         }
+    }
+
+    private sealed class FakeSubjectRepository : ISubjectRepository
+    {
+        private readonly IReadOnlyList<Subject> _subjects;
+
+        public FakeSubjectRepository(IReadOnlyList<Subject> subjects)
+        {
+            _subjects = subjects;
+        }
+
+        public Task<IReadOnlyList<Subject>> GetAllAsync(CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(_subjects);
+        }
+
+        public Task<Subject?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(_subjects.FirstOrDefault(subject => subject.Id == id));
+        }
+
+        public Task AddAsync(Subject subject, CancellationToken cancellationToken = default)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task UpdateAsync(Subject subject, CancellationToken cancellationToken = default)
+        {
+            UpdateCalls++;
+            foreach (var chapter in subject.Chapters.Where(chapter => chapter.Id == 0))
+            {
+                chapter.Id = subject.Id * 100 + subject.Chapters.Count;
+            }
+
+            return Task.CompletedTask;
+        }
+
+        public int UpdateCalls { get; private set; }
     }
 
     private sealed class FakeChunkingService : IChunkingService

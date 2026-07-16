@@ -11,4 +11,6 @@ public class UpdateDocumentDto
     public string? Description { get; set; }
 
     public int? ChapterId { get; set; }
+
+    public string? ChapterName { get; set; }
 }

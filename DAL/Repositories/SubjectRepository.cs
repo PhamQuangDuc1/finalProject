@@ -18,6 +18,7 @@ public class SubjectRepository : ISubjectRepository
     {
         return await _dbContext.Subjects
             .Include(subject => subject.Department)
+            .Include(subject => subject.Chapters)
             .Include(subject => subject.TeacherSubjects)
                 .ThenInclude(teacherSubject => teacherSubject.Teacher)
             .OrderBy(subject => subject.Name)
@@ -28,6 +29,7 @@ public class SubjectRepository : ISubjectRepository
     {
         return _dbContext.Subjects
             .Include(subject => subject.Department)
+            .Include(subject => subject.Chapters)
             .Include(subject => subject.TeacherSubjects)
                 .ThenInclude(teacherSubject => teacherSubject.Teacher)
             .FirstOrDefaultAsync(subject => subject.Id == id, cancellationToken);

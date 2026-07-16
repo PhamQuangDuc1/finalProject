@@ -37,11 +37,10 @@
             </div>
 
             <div class="mb-3">
-                <label asp-for="ChapterId" class="form-label">Chương</label>
-                <select asp-for="ChapterId" asp-items="Model.ChapterOptions" class="form-select">
-                    <option value="">Không gán chương</option>
-                </select>
-                <span asp-validation-for="ChapterId" class="text-danger"></span>
+                <label asp-for="ChapterName" class="form-label">Chương</label>
+                <input asp-for="ChapterName" class="form-control" placeholder="Nhập tên chương, ví dụ: Chương 1" />
+                <div class="form-text">Nếu chương chưa tồn tại trong môn học đã chọn, hệ thống sẽ tự tạo chương mới.</div>
+                <span asp-validation-for="ChapterName" class="text-danger"></span>
             </div>
 
             <div class="mb-3">

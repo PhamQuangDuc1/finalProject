@@ -30,6 +30,7 @@ public interface IDocumentService
         int? chapterId,
         string? description,
         string content,
+        string? chapterName = null,
         CancellationToken cancellationToken = default);
 
     Task ArchiveDocumentAsync(CurrentUserDto currentUser, int documentId, DateTime scheduledArchiveAtUtc, CancellationToken cancellationToken = default);

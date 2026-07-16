@@ -14,6 +14,10 @@ public class DocumentEditViewModel
     [Display(Name = "Chương")]
     public int? ChapterId { get; set; }
 
+    [StringLength(200, ErrorMessage = "Tên chương không được vượt quá 200 ký tự.")]
+    [Display(Name = "Chương")]
+    public string? ChapterName { get; set; }
+
     [Required(ErrorMessage = "Vui lòng nhập tiêu đề.")]
     [StringLength(250, ErrorMessage = "Tiêu đề không được vượt quá 250 ký tự.")]
     [Display(Name = "Tiêu đề")]

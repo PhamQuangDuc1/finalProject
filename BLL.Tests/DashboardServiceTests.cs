@@ -47,6 +47,8 @@ public class DashboardServiceTests
 
         public Task<IReadOnlyList<Document>> GetByTeacherAsync(int teacherId, CancellationToken cancellationToken = default) => Task.FromResult(_documents);
 
+        public Task<IReadOnlyList<Document>> GetBySubjectIdsAsync(IReadOnlyCollection<int> subjectIds, CancellationToken cancellationToken = default) => Task.FromResult(_documents);
+
         public Task<IReadOnlyList<Document>> GetIndexedActiveAsync(CancellationToken cancellationToken = default) => Task.FromResult(_documents);
 
         public Task<Document?> GetByIdAsync(int id, CancellationToken cancellationToken = default) => Task.FromResult(_documents.FirstOrDefault(document => document.Id == id));

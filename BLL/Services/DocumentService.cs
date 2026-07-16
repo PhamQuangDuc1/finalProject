@@ -23,16 +23,27 @@ public class DocumentService : IDocumentService
 
     private readonly IDocumentRepository _documentRepository;
     private readonly ITeacherSubjectRepository _teacherSubjectRepository;
+    private readonly ISubjectRepository _subjectRepository;
     private readonly IChunkingService _chunkingService;
 
     public DocumentService(
         IDocumentRepository documentRepository,
         ITeacherSubjectRepository teacherSubjectRepository,
+        ISubjectRepository subjectRepository,
         IChunkingService chunkingService)
     {
         _documentRepository = documentRepository;
         _teacherSubjectRepository = teacherSubjectRepository;
+        _subjectRepository = subjectRepository;
         _chunkingService = chunkingService;
+    }
+
+    public DocumentService(
+        IDocumentRepository documentRepository,
+        ITeacherSubjectRepository teacherSubjectRepository,
+        IChunkingService chunkingService)
+        : this(documentRepository, teacherSubjectRepository, new EmptySubjectRepository(), chunkingService)
+    {
     }
 
     public async Task<IReadOnlyList<DocumentDto>> GetDocumentsForAdminAsync(CurrentUserDto currentUser, CancellationToken cancellationToken = default)
@@ -54,7 +65,8 @@ public class DocumentService : IDocumentService
     {
         AuthorizationGuard.RequireRole(currentUser, UserRole.Teacher);
 
-        var documents = await _documentRepository.GetByTeacherAsync(currentUser.UserId, cancellationToken);
+        var accessibleSubjectIds = await GetTeacherAccessibleSubjectIdsAsync(currentUser.UserId, cancellationToken);
+        var documents = await _documentRepository.GetBySubjectIdsAsync(accessibleSubjectIds, cancellationToken);
         await ApplyDueScheduledArchivesAsync(documents, cancellationToken);
 
         return documents
@@ -98,7 +110,8 @@ public class DocumentService : IDocumentService
             return ToDto(document);
         }
 
-        if (currentUser.Role == UserRole.Teacher && document.UploadedByTeacherId == currentUser.UserId)
+        if (currentUser.Role == UserRole.Teacher
+            && await IsTeacherAllowedToViewSubjectAsync(currentUser.UserId, document.SubjectId, cancellationToken))
         {
             return ToDto(document);
         }
@@ -118,6 +131,7 @@ public class DocumentService : IDocumentService
     {
         var currentUser = new CurrentUserDto { UserId = teacherId, Role = UserRole.Teacher };
         var document = await GetOwnedTeacherDocumentAsync(currentUser, documentId, cancellationToken);
+        await GetManagedSubjectAsync(currentUser, document.SubjectId, cancellationToken);
 
         await EnsureStoredContentAsync(document, cancellationToken);
 
@@ -128,26 +142,26 @@ public class DocumentService : IDocumentService
     {
         AuthorizationGuard.RequireRole(currentUser, UserRole.Teacher);
 
-        var assignments = await _teacherSubjectRepository.GetByTeacherAsync(currentUser.UserId, cancellationToken);
-        var activeAssignments = assignments
-            .Where(assignment => assignment.Subject?.IsActive == true)
-            .ToList();
+        var managedSubjects = await GetManagedActiveSubjectsAsync(currentUser.UserId, cancellationToken);
+        var activeSubjects = managedSubjects.Count > 0
+            ? managedSubjects
+            : await GetManagedActiveAssignedSubjectsAsync(currentUser.UserId, cancellationToken);
 
         return new DocumentUploadOptionsDto
         {
-            Subjects = activeAssignments
-                .Select(assignment => new SubjectOptionDto
+            Subjects = activeSubjects
+                .Select(subject => new SubjectOptionDto
                 {
-                    Id = assignment.SubjectId,
-                    DisplayName = $"{assignment.Subject!.Code} - {assignment.Subject.Name}"
+                    Id = subject.Id,
+                    DisplayName = $"{subject.Code} - {subject.Name}"
                 })
                 .ToList(),
-            Chapters = activeAssignments
-                .SelectMany(assignment => assignment.Subject!.Chapters.Select(chapter => new DocumentChapterOptionDto
+            Chapters = activeSubjects
+                .SelectMany(subject => subject.Chapters.Select(chapter => new DocumentChapterOptionDto
                 {
                     Id = chapter.Id,
-                    SubjectId = chapter.SubjectId,
-                    DisplayName = $"{assignment.Subject.Code} - {chapter.Name}"
+                    SubjectId = subject.Id,
+                    DisplayName = $"{subject.Code} - {chapter.Name}"
                 }))
                 .ToList()
         };
@@ -162,12 +176,8 @@ public class DocumentService : IDocumentService
             throw new UnauthorizedAccessException("Teachers can only upload documents as themselves.");
         }
 
-        if (!await _teacherSubjectRepository.ExistsAsync(currentUser.UserId, document.SubjectId, cancellationToken))
-        {
-            throw new UnauthorizedAccessException("Teachers can only upload documents to assigned Subjects.");
-        }
-
-        await ValidateChapterForTeacherSubjectAsync(currentUser, document.SubjectId, document.ChapterId, cancellationToken);
+        var managedSubject = await GetManagedSubjectAsync(currentUser, document.SubjectId, cancellationToken);
+        var chapterId = await ResolveChapterIdAsync(managedSubject, document.ChapterId, document.ChapterName, cancellationToken);
 
         var extension = Path.GetExtension(document.FileName);
         if (!AllowedExtensions.Contains(extension))
@@ -192,7 +202,7 @@ public class DocumentService : IDocumentService
         var entity = new Document
         {
             SubjectId = document.SubjectId,
-            ChapterId = document.ChapterId,
+            ChapterId = chapterId,
             UploadedByTeacherId = currentUser.UserId,
             Title = document.Title,
             Description = document.Description,
@@ -240,12 +250,13 @@ public class DocumentService : IDocumentService
     public async Task UpdateDocumentAsync(CurrentUserDto currentUser, UpdateDocumentDto document, CancellationToken cancellationToken = default)
     {
         var entity = await GetOwnedTeacherDocumentAsync(currentUser, document.Id, cancellationToken);
-        await ValidateChapterForTeacherSubjectAsync(currentUser, document.SubjectId, document.ChapterId, cancellationToken);
+        var managedSubject = await GetManagedSubjectAsync(currentUser, document.SubjectId, cancellationToken);
+        var chapterId = await ResolveChapterIdAsync(managedSubject, document.ChapterId, document.ChapterName, cancellationToken);
 
         entity.SubjectId = document.SubjectId;
         entity.Title = document.Title;
         entity.Description = document.Description;
-        entity.ChapterId = document.ChapterId;
+        entity.ChapterId = chapterId;
         entity.UpdatedAt = DateTime.UtcNow;
 
         await _documentRepository.UpdateAsync(entity, cancellationToken);
@@ -258,6 +269,7 @@ public class DocumentService : IDocumentService
         CancellationToken cancellationToken = default)
     {
         var document = await GetOwnedTeacherDocumentAsync(currentUser, documentId, cancellationToken);
+        await GetManagedSubjectAsync(currentUser, document.SubjectId, cancellationToken);
 
         if (document.IsArchived)
         {
@@ -285,12 +297,14 @@ public class DocumentService : IDocumentService
         int? chapterId,
         string? description,
         string content,
+        string? chapterName = null,
         CancellationToken cancellationToken = default)
     {
         var currentUser = new CurrentUserDto { UserId = teacherId, Role = UserRole.Teacher };
         var document = await GetOwnedTeacherDocumentAsync(currentUser, documentId, cancellationToken);
 
-        await ValidateChapterForTeacherSubjectAsync(currentUser, subjectId, chapterId, cancellationToken);
+        var managedSubject = await GetManagedSubjectAsync(currentUser, subjectId, cancellationToken);
+        var resolvedChapterId = await ResolveChapterIdAsync(managedSubject, chapterId, chapterName, cancellationToken);
 
         var normalizedTitle = string.IsNullOrWhiteSpace(title)
             ? throw new InvalidOperationException("Tiêu đề không được để trống.")
@@ -314,7 +328,7 @@ public class DocumentService : IDocumentService
 
         document.Title = normalizedTitle;
         document.SubjectId = subjectId;
-        document.ChapterId = chapterId;
+        document.ChapterId = resolvedChapterId;
         document.Description = description;
         document.EditedContent = normalizedContent;
         document.HasManualEdits = true;
@@ -349,6 +363,7 @@ public class DocumentService : IDocumentService
     public async Task ReindexDocumentAsync(CurrentUserDto currentUser, int documentId, CancellationToken cancellationToken = default)
     {
         var document = await GetOwnedTeacherDocumentAsync(currentUser, documentId, cancellationToken);
+        await GetManagedSubjectAsync(currentUser, document.SubjectId, cancellationToken);
 
         if (document.IsArchived)
         {
@@ -419,6 +434,36 @@ public class DocumentService : IDocumentService
         return document;
     }
 
+    private async Task<IReadOnlyCollection<int>> GetAssignedActiveSubjectIdsAsync(int teacherId, CancellationToken cancellationToken)
+    {
+        var assignments = await _teacherSubjectRepository.GetByTeacherAsync(teacherId, cancellationToken);
+
+        return assignments
+            .Where(assignment => assignment.Subject?.IsActive == true)
+            .Select(assignment => assignment.SubjectId)
+            .Distinct()
+            .ToList();
+    }
+
+    private async Task<IReadOnlyCollection<int>> GetTeacherAccessibleSubjectIdsAsync(int teacherId, CancellationToken cancellationToken)
+    {
+        var assignedSubjectIds = await GetAssignedActiveSubjectIdsAsync(teacherId, cancellationToken);
+        var managedSubjectIds = (await GetManagedActiveSubjectsAsync(teacherId, cancellationToken))
+            .Select(subject => subject.Id);
+
+        return assignedSubjectIds
+            .Concat(managedSubjectIds)
+            .Distinct()
+            .ToList();
+    }
+
+    private async Task<bool> IsTeacherAllowedToViewSubjectAsync(int teacherId, int subjectId, CancellationToken cancellationToken)
+    {
+        var accessibleSubjectIds = await GetTeacherAccessibleSubjectIdsAsync(teacherId, cancellationToken);
+
+        return accessibleSubjectIds.Contains(subjectId);
+    }
+
     private async Task ValidateChapterForTeacherSubjectAsync(
         CurrentUserDto currentUser,
         int subjectId,
@@ -441,6 +486,102 @@ public class DocumentService : IDocumentService
         {
             throw new InvalidOperationException("Selected Chapter does not belong to the selected Subject.");
         }
+    }
+
+    private async Task<Subject> GetManagedSubjectAsync(
+        CurrentUserDto currentUser,
+        int subjectId,
+        CancellationToken cancellationToken)
+    {
+        AuthorizationGuard.RequireRole(currentUser, UserRole.Teacher);
+
+        var managedSubjects = await GetManagedActiveSubjectsAsync(currentUser.UserId, cancellationToken);
+        var subject = managedSubjects.FirstOrDefault(subject => subject.Id == subjectId);
+
+        if (subject is null && managedSubjects.Count == 0)
+        {
+            subject = (await GetManagedActiveAssignedSubjectsAsync(currentUser.UserId, cancellationToken))
+                .FirstOrDefault(subject => subject.Id == subjectId);
+        }
+
+        if (subject is null)
+        {
+            throw new UnauthorizedAccessException("Only the department manager can upload or modify documents for this Subject.");
+        }
+
+        return subject;
+    }
+
+    private async Task<IReadOnlyList<Subject>> GetManagedActiveSubjectsAsync(int teacherId, CancellationToken cancellationToken)
+    {
+        var subjects = await _subjectRepository.GetAllAsync(cancellationToken);
+
+        return subjects
+            .Where(subject => subject.IsActive && subject.Department?.ManagerTeacherId == teacherId)
+            .ToList();
+    }
+
+    private async Task<IReadOnlyList<Subject>> GetManagedActiveAssignedSubjectsAsync(int teacherId, CancellationToken cancellationToken)
+    {
+        var assignments = await _teacherSubjectRepository.GetByTeacherAsync(teacherId, cancellationToken);
+
+        return assignments
+            .Select(assignment => assignment.Subject)
+            .Where(subject => subject?.IsActive == true && subject.Department?.ManagerTeacherId == teacherId)
+            .Select(subject => subject!)
+            .ToList();
+    }
+
+    private static void ValidateChapterForSubject(Subject subject, int? chapterId)
+    {
+        if (chapterId.HasValue && subject.Chapters.All(chapter => chapter.Id != chapterId.Value))
+        {
+            throw new InvalidOperationException("Selected Chapter does not belong to the selected Subject.");
+        }
+    }
+
+    private async Task<int?> ResolveChapterIdAsync(
+        Subject subject,
+        int? chapterId,
+        string? chapterName,
+        CancellationToken cancellationToken)
+    {
+        var normalizedChapterName = string.IsNullOrWhiteSpace(chapterName)
+            ? null
+            : chapterName.Trim();
+
+        if (string.IsNullOrWhiteSpace(normalizedChapterName))
+        {
+            ValidateChapterForSubject(subject, chapterId);
+            return chapterId;
+        }
+
+        if (normalizedChapterName.Length > 200)
+        {
+            throw new InvalidOperationException("Tên chương không được vượt quá 200 ký tự.");
+        }
+
+        var existingChapter = subject.Chapters.FirstOrDefault(chapter =>
+            string.Equals(chapter.Name.Trim(), normalizedChapterName, StringComparison.OrdinalIgnoreCase));
+        if (existingChapter is not null)
+        {
+            return existingChapter.Id;
+        }
+
+        var nextOrderIndex = subject.Chapters.Count == 0
+            ? 1
+            : subject.Chapters.Max(chapter => chapter.OrderIndex) + 1;
+        var chapter = new Chapter
+        {
+            SubjectId = subject.Id,
+            Name = normalizedChapterName,
+            OrderIndex = nextOrderIndex
+        };
+
+        subject.Chapters.Add(chapter);
+        await _subjectRepository.UpdateAsync(subject, cancellationToken);
+
+        return chapter.Id;
     }
 
     private async Task ApplyDueScheduledArchivesAsync(IEnumerable<Document> documents, CancellationToken cancellationToken)
@@ -646,6 +787,29 @@ public class DocumentService : IDocumentService
         }
 
         return text;
+    }
+
+    private sealed class EmptySubjectRepository : ISubjectRepository
+    {
+        public Task<IReadOnlyList<Subject>> GetAllAsync(CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult<IReadOnlyList<Subject>>(Array.Empty<Subject>());
+        }
+
+        public Task<Subject?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult<Subject?>(null);
+        }
+
+        public Task AddAsync(Subject subject, CancellationToken cancellationToken = default)
+        {
+            throw new NotSupportedException();
+        }
+
+        public Task UpdateAsync(Subject subject, CancellationToken cancellationToken = default)
+        {
+            throw new NotSupportedException();
+        }
     }
 
 }

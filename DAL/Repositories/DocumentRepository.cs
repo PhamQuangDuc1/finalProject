@@ -45,6 +45,27 @@ public class DocumentRepository : IDocumentRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<Document>> GetBySubjectIdsAsync(IReadOnlyCollection<int> subjectIds, CancellationToken cancellationToken = default)
+    {
+        if (subjectIds.Count == 0)
+        {
+            return Array.Empty<Document>();
+        }
+
+        return await _dbContext.Documents
+            .Include(document => document.Subject)
+                .ThenInclude(subject => subject!.Department)
+            .Include(document => document.UploadedByTeacher)
+            .Include(document => document.ContentUpdatedByTeacher)
+            .Include(document => document.Chapter)
+            .Include(document => document.Chunks)
+            .Include(document => document.Versions)
+                .ThenInclude(version => version.UpdatedByTeacher)
+            .Where(document => subjectIds.Contains(document.SubjectId))
+            .OrderByDescending(document => document.UploadedAt)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<IReadOnlyList<Document>> GetIndexedActiveAsync(CancellationToken cancellationToken = default)
     {
         return await _dbContext.Documents

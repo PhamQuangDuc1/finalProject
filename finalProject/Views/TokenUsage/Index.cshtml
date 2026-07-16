@@ -1,10 +1,16 @@
-@model AiUsageDashboardViewModel
+﻿@model AiUsageDashboardViewModel
 
 @{
     ViewData["Title"] = "Thống kê AI & chi phí";
     var dailySummaries = Model.Dashboard.DailySummaries;
     var maxDailyTokens = Math.Max(1, dailySummaries.Count == 0 ? 0 : dailySummaries.Max(summary => summary.TotalTokens));
     var maxDailyCost = Math.Max(0.000001m, dailySummaries.Count == 0 ? 0 : dailySummaries.Max(summary => summary.EstimatedCost));
+    var dailyTitle = Model.SortBy switch
+    {
+        BLL.DTOs.AiUsageDailySortBy.TotalTokens => "Token theo ngày, nhiều nhất trước",
+        BLL.DTOs.AiUsageDailySortBy.EstimatedCost => "Chi phí theo ngày, nhiều nhất trước",
+        _ => "Token và chi phí theo ngày, mới nhất trước"
+    };
 }
 
 <div class="admin-page">
@@ -26,23 +32,31 @@
             <h2 class="section-title">Điều kiện thống kê</h2>
         </div>
         <form asp-action="Index" method="get" class="row g-3 align-items-end admin-form">
-            <div class="col-md-3">
+            <div class="col-md-6 col-lg-2">
                 <label asp-for="Month" class="form-label">Tháng</label>
                 <select asp-for="Month" asp-items="Model.MonthOptions" class="form-select"></select>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-6 col-lg-2">
                 <label asp-for="ModelName" class="form-label">Model</label>
                 <select asp-for="ModelName" asp-items="Model.ModelOptions" class="form-select">
                     <option value="">Tất cả model</option>
                 </select>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-6 col-lg-2">
                 <label asp-for="OperationType" class="form-label">Loại tác vụ</label>
                 <select asp-for="OperationType" asp-items="Model.OperationOptions" class="form-select">
                     <option value="">Tất cả tác vụ</option>
                 </select>
             </div>
-            <div class="col-md-2 d-flex gap-2">
+            <div class="col-md-6 col-lg-2">
+                <label asp-for="DateScope" class="form-label">Phạm vi</label>
+                <select asp-for="DateScope" asp-items="Model.DateScopeOptions" class="form-select"></select>
+            </div>
+            <div class="col-md-6 col-lg-2">
+                <label asp-for="SortBy" class="form-label">Sắp xếp</label>
+                <select asp-for="SortBy" asp-items="Model.SortOptions" class="form-select"></select>
+            </div>
+            <div class="col-md-12 col-lg-2 d-flex gap-2">
                 <button type="submit" class="btn btn-primary admin-primary-action flex-fill">Lọc</button>
                 <a class="btn btn-outline-secondary" asp-action="Index">Xóa</a>
             </div>
@@ -79,7 +93,7 @@
     <section class="card-panel admin-panel">
         <div class="panel-heading">
             <p class="dashboard-kicker">Theo ngày</p>
-            <h2 class="section-title">Token và chi phí theo ngày</h2>
+            <h2 class="section-title">@dailyTitle</h2>
         </div>
         <div class="table-responsive">
             <table class="table admin-table align-middle mb-0">
@@ -229,3 +243,4 @@
         };
     }
 }
+

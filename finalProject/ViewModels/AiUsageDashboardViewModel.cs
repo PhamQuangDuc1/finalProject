@@ -14,9 +14,17 @@ public class AiUsageDashboardViewModel
 
     public AiOperationType? OperationType { get; set; }
 
+    public AiUsageDateScope DateScope { get; set; } = AiUsageDateScope.Month;
+
+    public AiUsageDailySortBy SortBy { get; set; } = AiUsageDailySortBy.NewestDate;
+
     public IReadOnlyList<SelectListItem> MonthOptions { get; set; } = Array.Empty<SelectListItem>();
 
     public IReadOnlyList<SelectListItem> ModelOptions { get; set; } = Array.Empty<SelectListItem>();
 
     public IReadOnlyList<SelectListItem> OperationOptions { get; set; } = Array.Empty<SelectListItem>();
+
+    public IReadOnlyList<SelectListItem> DateScopeOptions { get; set; } = Array.Empty<SelectListItem>();
+
+    public IReadOnlyList<SelectListItem> SortOptions { get; set; } = Array.Empty<SelectListItem>();
 }

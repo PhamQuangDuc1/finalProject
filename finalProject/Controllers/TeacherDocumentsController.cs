@@ -48,6 +48,7 @@ public class TeacherDocumentsController : Controller
         };
         var documents = await _documentService.GetDocumentsForTeacherAsync(currentUser, filter, cancellationToken);
         var allTeacherDocuments = await _documentService.GetDocumentsForTeacherAsync(currentUser, cancellationToken);
+        var uploadOptions = await _documentService.GetUploadOptionsForTeacherAsync(currentUser, cancellationToken);
 
         return View(new TeacherDocumentsIndexViewModel
         {
@@ -56,7 +57,8 @@ public class TeacherDocumentsController : Controller
             Status = status,
             ChapterId = chapterId,
             Search = search,
-            SubjectOptions = await GetSubjectOptionsAsync(currentUser.UserId, cancellationToken),
+            CanManageDocuments = uploadOptions.Subjects.Any(),
+            SubjectOptions = GetSubjectOptions(allTeacherDocuments),
             StatusOptions = GetStatusOptions(),
             ChapterOptions = GetChapterOptions(allTeacherDocuments)
         });
@@ -65,7 +67,14 @@ public class TeacherDocumentsController : Controller
     [HttpGet]
     public async Task<IActionResult> Upload(CancellationToken cancellationToken)
     {
-        return View(await BuildUploadViewModelAsync(new DocumentUploadViewModel(), cancellationToken));
+        var model = await BuildUploadViewModelAsync(new DocumentUploadViewModel(), cancellationToken);
+        if (model.SubjectOptions.Count == 0)
+        {
+            TempData["StatusMessage"] = "Chi truong bo mon moi duoc tai tai lieu len.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        return View(model);
     }
 
     [HttpPost]
@@ -103,6 +112,7 @@ public class TeacherDocumentsController : Controller
             {
                 SubjectId = model.SubjectId,
                 ChapterId = model.ChapterId,
+                ChapterName = model.ChapterName,
                 UploadedByTeacherId = currentUser.UserId,
                 Title = model.Title,
                 Description = model.Description,
@@ -148,7 +158,15 @@ public class TeacherDocumentsController : Controller
             return Forbid();
         }
 
-        return document is null ? NotFound() : View(document);
+        if (document is null)
+        {
+            return NotFound();
+        }
+
+        var uploadOptions = await _documentService.GetUploadOptionsForTeacherAsync(GetCurrentUser(), cancellationToken);
+        ViewData["CanManageDocument"] = uploadOptions.Subjects.Any(subject => subject.Id == document.SubjectId);
+
+        return View(document);
     }
 
     [HttpGet]
@@ -175,6 +193,7 @@ public class TeacherDocumentsController : Controller
             Id = document.Id,
             SubjectId = document.SubjectId,
             ChapterId = document.ChapterId,
+            ChapterName = document.ChapterName,
             Title = document.Title,
             Description = document.Description,
             Content = document.CurrentContent,
@@ -204,6 +223,7 @@ public class TeacherDocumentsController : Controller
                 model.ChapterId,
                 model.Description,
                 model.Content,
+                model.ChapterName,
                 cancellationToken);
         }
         catch (UnauthorizedAccessException)
@@ -300,17 +320,6 @@ public class TeacherDocumentsController : Controller
         return PhysicalFile(document.FilePath, "application/octet-stream", document.FileName);
     }
 
-    private async Task<IReadOnlyList<SelectListItem>> GetSubjectOptionsAsync(int teacherId, CancellationToken cancellationToken)
-    {
-        var options = await _documentService.GetUploadOptionsForTeacherAsync(new CurrentUserDto
-        {
-            UserId = teacherId,
-            Role = UserRole.Teacher
-        }, cancellationToken);
-
-        return options.Subjects.Select(subject => new SelectListItem(subject.DisplayName, subject.Id.ToString())).ToList();
-    }
-
     private async Task<DocumentUploadViewModel> BuildUploadViewModelAsync(DocumentUploadViewModel model, CancellationToken cancellationToken)
     {
         var options = await _documentService.GetUploadOptionsForTeacherAsync(GetCurrentUser(), cancellationToken);
@@ -319,6 +328,15 @@ public class TeacherDocumentsController : Controller
             .ToList();
         model.ChapterOptions = options.Chapters
             .Select(chapter => new SelectListItem(chapter.DisplayName, chapter.Id.ToString(), chapter.Id == model.ChapterId))
+            .ToList();
+        model.ChapterMetadata = options.Chapters
+            .Select(chapter => new DocumentChapterOptionViewModel
+            {
+                Id = chapter.Id,
+                SubjectId = chapter.SubjectId,
+                Name = chapter.DisplayName,
+                DisplayName = chapter.DisplayName
+            })
             .ToList();
 
         return model;
@@ -341,6 +359,14 @@ public class TeacherDocumentsController : Controller
     {
         return Enum.GetValues<DocumentStatus>()
             .Select(status => new SelectListItem(status.ToString(), status.ToString()))
+            .ToList();
+    }
+
+    private static IReadOnlyList<SelectListItem> GetSubjectOptions(IReadOnlyList<DocumentDto> documents)
+    {
+        return documents
+            .GroupBy(document => document.SubjectId)
+            .Select(group => new SelectListItem(group.First().SubjectName, group.Key.ToString()))
             .ToList();
     }
 

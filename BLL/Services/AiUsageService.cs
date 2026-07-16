@@ -107,14 +107,27 @@ public class AiUsageService : IAiUsageService
                 || string.Equals(log.ModelName, filter.ModelName, StringComparison.OrdinalIgnoreCase))
             .Where(log => !filter.OperationType.HasValue || log.OperationType == filter.OperationType.Value)
             .ToList();
+        var selectedDay = filter.DateScope == AiUsageDateScope.Today
+            ? (filter.Day?.Date ?? DateTime.UtcNow.Date)
+            : (DateTime?)null;
+        if (selectedDay.HasValue)
+        {
+            filteredLogs = filteredLogs
+                .Where(log => log.CreatedAt.Date == selectedDay.Value)
+                .ToList();
+        }
 
         var requests = filteredLogs.Count;
         var totalTokens = filteredLogs.Sum(log => log.TotalTokens);
-        var dailySummaries = Enumerable.Range(1, DateTime.DaysInMonth(year, month))
+        var summaryDates = selectedDay.HasValue
+            ? new[] { selectedDay.Value }
+            : Enumerable.Range(1, DateTime.DaysInMonth(year, month))
+                .Select(day => new DateTime(year, month, day, 0, 0, 0, DateTimeKind.Utc));
+        var dailySummaries = summaryDates
             .Select(day =>
             {
-                var date = new DateTime(year, month, day, 0, 0, 0, DateTimeKind.Utc);
-                var dayLogs = filteredLogs.Where(log => log.CreatedAt.Date == date.Date).ToList();
+                var date = DateTime.SpecifyKind(day.Date, DateTimeKind.Utc);
+                var dayLogs = filteredLogs.Where(log => log.CreatedAt.Date == date).ToList();
 
                 return new AiUsageDailySummaryDto
                 {
@@ -127,6 +140,7 @@ public class AiUsageService : IAiUsageService
                 };
             })
             .ToList();
+        dailySummaries = SortDailySummaries(dailySummaries, filter.SortBy).ToList();
 
         return new AiUsageDashboardDto
         {
@@ -178,5 +192,21 @@ public class AiUsageService : IAiUsageService
         return log.EstimatedCost > 0
             ? log.EstimatedCost
             : _costEstimator.EstimateCost(log.ModelName, log.PromptTokens, log.CompletionTokens);
+    }
+
+    private static IEnumerable<AiUsageDailySummaryDto> SortDailySummaries(
+        IEnumerable<AiUsageDailySummaryDto> dailySummaries,
+        AiUsageDailySortBy sortBy)
+    {
+        return sortBy switch
+        {
+            AiUsageDailySortBy.TotalTokens => dailySummaries
+                .OrderByDescending(summary => summary.TotalTokens)
+                .ThenByDescending(summary => summary.Date),
+            AiUsageDailySortBy.EstimatedCost => dailySummaries
+                .OrderByDescending(summary => summary.EstimatedCost)
+                .ThenByDescending(summary => summary.Date),
+            _ => dailySummaries.OrderByDescending(summary => summary.Date)
+        };
     }
 }

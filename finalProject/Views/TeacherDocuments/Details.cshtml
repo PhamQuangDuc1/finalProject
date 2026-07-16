@@ -2,6 +2,7 @@
 
 @{
     var minimumArchiveAt = DateTime.Now.AddDays(7).ToString("yyyy-MM-ddTHH:mm");
+    var canManageDocument = ViewData["CanManageDocument"] as bool? == true;
     ViewData["Title"] = "Chi tiết tài liệu";
 }
 
@@ -13,7 +14,10 @@
     <div class="d-flex flex-wrap gap-2">
         <a class="btn btn-outline-secondary" asp-action="Index">Quay lại</a>
         <a class="btn btn-outline-primary" asp-action="Download" asp-route-id="@Model.Id">Tải xuống file gốc</a>
-        <a class="btn btn-primary" asp-action="Edit" asp-route-id="@Model.Id">Sửa</a>
+        @if (canManageDocument)
+        {
+            <a class="btn btn-primary" asp-action="Edit" asp-route-id="@Model.Id">Sửa</a>
+        }
     </div>
 </div>
 
@@ -118,21 +122,24 @@
     </section>
 }
 
-<section class="card-panel">
-    <h2 class="section-title">Thao tác</h2>
-    <div class="d-flex flex-wrap gap-2">
-        <form asp-action="Archive" asp-route-id="@Model.Id" method="post" class="d-flex flex-wrap gap-2 align-items-end">
-            <div>
-                <label for="scheduledArchiveAt" class="form-label mb-1">An sau ngay</label>
-                <input id="scheduledArchiveAt" name="scheduledArchiveAt" type="datetime-local" class="form-control" min="@minimumArchiveAt" required disabled="@Model.IsArchived" />
-            </div>
-            <button type="submit" class="btn btn-outline-warning" disabled="@Model.IsArchived">Len lich an</button>
-        </form>
-        <form asp-action="Reindex" asp-route-id="@Model.Id" method="post">
-            <button type="submit" class="btn btn-outline-secondary" disabled="@Model.IsArchived">Tạo lại chỉ mục</button>
-        </form>
-    </div>
-</section>
+@if (canManageDocument)
+{
+    <section class="card-panel">
+        <h2 class="section-title">Thao tác</h2>
+        <div class="d-flex flex-wrap gap-2">
+            <form asp-action="Archive" asp-route-id="@Model.Id" method="post" class="d-flex flex-wrap gap-2 align-items-end">
+                <div>
+                    <label for="scheduledArchiveAt" class="form-label mb-1">Ẩn sau ngày</label>
+                    <input id="scheduledArchiveAt" name="scheduledArchiveAt" type="datetime-local" class="form-control" min="@minimumArchiveAt" required disabled="@Model.IsArchived" />
+                </div>
+                <button type="submit" class="btn btn-outline-warning" disabled="@Model.IsArchived">Lên lịch ẩn</button>
+            </form>
+            <form asp-action="Reindex" asp-route-id="@Model.Id" method="post">
+                <button type="submit" class="btn btn-outline-secondary" disabled="@Model.IsArchived">Tạo lại chỉ mục</button>
+            </form>
+        </div>
+    </section>
+}
 
 @functions {
     private static string FormatBytes(long bytes)

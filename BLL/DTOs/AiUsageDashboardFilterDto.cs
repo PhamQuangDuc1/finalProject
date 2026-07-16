@@ -11,4 +11,10 @@ public class AiUsageDashboardFilterDto
     public string? ModelName { get; set; }
 
     public AiOperationType? OperationType { get; set; }
+
+    public AiUsageDateScope DateScope { get; set; } = AiUsageDateScope.Month;
+
+    public DateTime? Day { get; set; }
+
+    public AiUsageDailySortBy SortBy { get; set; } = AiUsageDailySortBy.NewestDate;
 }

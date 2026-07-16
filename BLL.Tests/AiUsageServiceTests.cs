@@ -61,6 +61,184 @@ public class AiUsageServiceTests
             new AiUsageDashboardFilterDto { Year = 2026, Month = 7 }));
     }
 
+    [Fact]
+    public async Task GetDashboardAsync_SortsDailySummariesByNewestDateByDefault()
+    {
+        var logs = new[]
+        {
+            new AiUsageLog
+            {
+                CreatedAt = new DateTime(2026, 7, 14, 0, 0, 0, DateTimeKind.Utc),
+                ModelName = "gemini",
+                PromptTokens = 10,
+                CompletionTokens = 5,
+                TotalTokens = 15
+            },
+            new AiUsageLog
+            {
+                CreatedAt = new DateTime(2026, 7, 16, 0, 0, 0, DateTimeKind.Utc),
+                ModelName = "gemini",
+                PromptTokens = 10,
+                CompletionTokens = 5,
+                TotalTokens = 15
+            },
+            new AiUsageLog
+            {
+                CreatedAt = new DateTime(2026, 7, 15, 0, 0, 0, DateTimeKind.Utc),
+                ModelName = "gemini",
+                PromptTokens = 40,
+                CompletionTokens = 10,
+                TotalTokens = 50
+            }
+        };
+        var service = new AiUsageService(new FakeAiUsageRepository(logs), new AiCostEstimator());
+
+        var dashboard = await service.GetDashboardAsync(
+            new CurrentUserDto { UserId = 1, Role = UserRole.Admin },
+            new AiUsageDashboardFilterDto { Year = 2026, Month = 7 });
+
+        Assert.Equal(new DateTime(2026, 7, 31, 0, 0, 0, DateTimeKind.Utc), dashboard.DailySummaries[0].Date);
+        Assert.Equal(new DateTime(2026, 7, 30, 0, 0, 0, DateTimeKind.Utc), dashboard.DailySummaries[1].Date);
+    }
+
+    [Fact]
+    public async Task GetDashboardAsync_SortsDailySummariesByTotalTokensThenNewestDate()
+    {
+        var logs = new[]
+        {
+            new AiUsageLog
+            {
+                CreatedAt = new DateTime(2026, 7, 14, 0, 0, 0, DateTimeKind.Utc),
+                ModelName = "gemini",
+                PromptTokens = 10,
+                CompletionTokens = 5,
+                TotalTokens = 15
+            },
+            new AiUsageLog
+            {
+                CreatedAt = new DateTime(2026, 7, 16, 0, 0, 0, DateTimeKind.Utc),
+                ModelName = "gemini",
+                PromptTokens = 10,
+                CompletionTokens = 5,
+                TotalTokens = 15
+            },
+            new AiUsageLog
+            {
+                CreatedAt = new DateTime(2026, 7, 15, 0, 0, 0, DateTimeKind.Utc),
+                ModelName = "gemini",
+                PromptTokens = 40,
+                CompletionTokens = 10,
+                TotalTokens = 50
+            }
+        };
+        var service = new AiUsageService(new FakeAiUsageRepository(logs), new AiCostEstimator());
+
+        var dashboard = await service.GetDashboardAsync(
+            new CurrentUserDto { UserId = 1, Role = UserRole.Admin },
+            new AiUsageDashboardFilterDto { Year = 2026, Month = 7, SortBy = AiUsageDailySortBy.TotalTokens });
+
+        Assert.Equal(new DateTime(2026, 7, 15, 0, 0, 0, DateTimeKind.Utc), dashboard.DailySummaries[0].Date);
+        Assert.Equal(new DateTime(2026, 7, 16, 0, 0, 0, DateTimeKind.Utc), dashboard.DailySummaries[1].Date);
+    }
+
+    [Fact]
+    public async Task GetDashboardAsync_SortsDailySummariesByEstimatedCostThenNewestDate()
+    {
+        var logs = new[]
+        {
+            new AiUsageLog
+            {
+                CreatedAt = new DateTime(2026, 7, 14, 0, 0, 0, DateTimeKind.Utc),
+                ModelName = "gemini",
+                PromptTokens = 10,
+                CompletionTokens = 5,
+                TotalTokens = 15,
+                EstimatedCost = 0.10m
+            },
+            new AiUsageLog
+            {
+                CreatedAt = new DateTime(2026, 7, 16, 0, 0, 0, DateTimeKind.Utc),
+                ModelName = "gemini",
+                PromptTokens = 40,
+                CompletionTokens = 10,
+                TotalTokens = 50,
+                EstimatedCost = 0.10m
+            },
+            new AiUsageLog
+            {
+                CreatedAt = new DateTime(2026, 7, 15, 0, 0, 0, DateTimeKind.Utc),
+                ModelName = "gemini",
+                PromptTokens = 1,
+                CompletionTokens = 1,
+                TotalTokens = 2,
+                EstimatedCost = 0.50m
+            }
+        };
+        var service = new AiUsageService(new FakeAiUsageRepository(logs), new AiCostEstimator());
+
+        var dashboard = await service.GetDashboardAsync(
+            new CurrentUserDto { UserId = 1, Role = UserRole.Admin },
+            new AiUsageDashboardFilterDto { Year = 2026, Month = 7, SortBy = AiUsageDailySortBy.EstimatedCost });
+
+        Assert.Equal(new DateTime(2026, 7, 15, 0, 0, 0, DateTimeKind.Utc), dashboard.DailySummaries[0].Date);
+        Assert.Equal(new DateTime(2026, 7, 16, 0, 0, 0, DateTimeKind.Utc), dashboard.DailySummaries[1].Date);
+    }
+
+    [Fact]
+    public async Task GetDashboardAsync_WhenDateScopeToday_ReturnsOnlySelectedDayTotals()
+    {
+        var logs = new[]
+        {
+            new AiUsageLog
+            {
+                CreatedAt = new DateTime(2026, 7, 15, 10, 0, 0, DateTimeKind.Utc),
+                ModelName = "gemini",
+                PromptTokens = 100,
+                CompletionTokens = 20,
+                TotalTokens = 120,
+                EstimatedCost = 0.10m
+            },
+            new AiUsageLog
+            {
+                CreatedAt = new DateTime(2026, 7, 16, 10, 0, 0, DateTimeKind.Utc),
+                ModelName = "gemini",
+                PromptTokens = 30,
+                CompletionTokens = 10,
+                TotalTokens = 40,
+                EstimatedCost = 0.20m
+            },
+            new AiUsageLog
+            {
+                CreatedAt = new DateTime(2026, 7, 16, 15, 0, 0, DateTimeKind.Utc),
+                ModelName = "gemini",
+                PromptTokens = 5,
+                CompletionTokens = 5,
+                TotalTokens = 10,
+                EstimatedCost = 0.05m
+            }
+        };
+        var service = new AiUsageService(new FakeAiUsageRepository(logs), new AiCostEstimator());
+
+        var dashboard = await service.GetDashboardAsync(
+            new CurrentUserDto { UserId = 1, Role = UserRole.Admin },
+            new AiUsageDashboardFilterDto
+            {
+                Year = 2026,
+                Month = 7,
+                DateScope = AiUsageDateScope.Today,
+                Day = new DateTime(2026, 7, 16, 0, 0, 0, DateTimeKind.Utc)
+            });
+
+        Assert.Equal(35, dashboard.TotalPromptTokensThisMonth);
+        Assert.Equal(15, dashboard.TotalCompletionTokensThisMonth);
+        Assert.Equal(50, dashboard.TotalTokensThisMonth);
+        Assert.Equal(0.25m, dashboard.EstimatedCostThisMonth);
+        Assert.Equal(2, dashboard.RequestsThisMonth);
+        var day = Assert.Single(dashboard.DailySummaries);
+        Assert.Equal(new DateTime(2026, 7, 16, 0, 0, 0, DateTimeKind.Utc), day.Date);
+        Assert.Equal(50, day.TotalTokens);
+    }
+
     private sealed class FakeAiUsageRepository : IAiUsageRepository
     {
         private readonly IReadOnlyList<AiUsageLog> _logs;

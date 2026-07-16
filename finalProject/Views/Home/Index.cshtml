@@ -70,7 +70,7 @@
             {
                 foreach (var feature in features)
                 {
-                    <div class="studymate-feature-pill">
+                    <div class="studymate-feature-pill" aria-hidden="@(repeat == 1 ? "true" : "false")">
                         <span class="studymate-feature-icon" aria-hidden="true">
                             <svg viewBox="0 0 16 16" focusable="false">
                                 @if (feature.Icon == "flashcard")
