@@ -6,15 +6,27 @@ public class User
 
     public string Username { get; set; } = string.Empty;
 
+    public string Email { get; set; } = string.Empty;
+
     public string? PasswordHash { get; set; }
 
     public string FullName { get; set; } = string.Empty;
 
     public UserRole Role { get; set; }
 
+    public AccountStatus AccountStatus { get; set; } = AccountStatus.Active;
+
     public bool IsActive { get; set; } = true;
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    public DateTime? ApprovedAt { get; set; }
+
+    public int? ApprovedByAdminId { get; set; }
+
+    public User? ApprovedByAdmin { get; set; }
+
+    public ICollection<User> ApprovedAccounts { get; set; } = new List<User>();
 
     public ICollection<Department> ManagedDepartments { get; set; } = new List<Department>();
 

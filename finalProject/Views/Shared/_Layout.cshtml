@@ -28,7 +28,8 @@
                         <a asp-controller="TokenUsage" asp-action="Index">Thống kê AI &amp; chi phí</a>
                         <a asp-controller="SubscriptionPackages" asp-action="Index">Gói đăng ký</a>
                         <a asp-controller="Payments" asp-action="Manage">Quản lý thanh toán</a>
-                        <a asp-controller="AdminUsers" asp-action="Index">Quản lý người dùng</a>
+                        <a asp-controller="AdminAccounts" asp-action="Index">Quản lý tài khoản</a>
+                        <a asp-controller="AdminUsers" asp-action="Index">Quản lý gói người dùng</a>
                     }
 
                     @if (User.IsInRole(StudyMateRoles.Teacher))

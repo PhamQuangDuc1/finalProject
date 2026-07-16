@@ -18,6 +18,7 @@ public static class DependencyInjection
         services.Configure<GeminiOptions>(configuration.GetSection("Gemini"));
         services.Configure<VNPayOptions>(configuration.GetSection("VNPay"));
         services.AddScoped<IAuthenticationService, AuthenticationService>();
+        services.AddScoped<IUserManagementService, UserManagementService>();
         services.AddScoped<IDashboardService, DashboardService>();
         services.AddScoped<IDocumentService, DocumentService>();
         services.AddScoped<IDepartmentService, DepartmentService>();

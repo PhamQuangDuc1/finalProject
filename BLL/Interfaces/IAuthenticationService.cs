@@ -4,5 +4,5 @@ namespace BLL.Interfaces;
 
 public interface IAuthenticationService
 {
-    Task<AuthenticatedUserDto?> AuthenticateAsync(string username, string password, CancellationToken cancellationToken = default);
+    Task<AuthenticationResultDto> AuthenticateAsync(string usernameOrEmail, string password, CancellationToken cancellationToken = default);
 }

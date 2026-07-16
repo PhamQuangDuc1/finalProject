@@ -515,6 +515,11 @@ public class PaymentServiceTests
             return Task.FromResult<User?>(null);
         }
 
+        public Task<User?> GetByEmailAsync(string email, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult<User?>(null);
+        }
+
         public Task<User?> ValidateUserAsync(string username, string passwordHash, CancellationToken cancellationToken = default)
         {
             return Task.FromResult<User?>(null);
@@ -523,6 +528,21 @@ public class PaymentServiceTests
         public Task<IReadOnlyList<User>> GetByRoleAsync(UserRole role, CancellationToken cancellationToken = default)
         {
             return Task.FromResult<IReadOnlyList<User>>(Array.Empty<User>());
+        }
+
+        public Task<IReadOnlyList<User>> GetAllAsync(CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult<IReadOnlyList<User>>(Array.Empty<User>());
+        }
+
+        public Task AddAsync(User user, CancellationToken cancellationToken = default)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task UpdateAsync(User user, CancellationToken cancellationToken = default)
+        {
+            throw new NotImplementedException();
         }
     }
 }

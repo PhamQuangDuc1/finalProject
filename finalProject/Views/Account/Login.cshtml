@@ -34,6 +34,11 @@
                 <p>Truy cập không gian học tập và quản trị của StudyMate AI.</p>
             </div>
 
+            @if (TempData["StatusMessage"] is string statusMessage)
+            {
+                <div class="alert alert-success" role="alert">@statusMessage</div>
+            }
+
             <div class="login-demo-accounts" aria-label="Tài khoản test">
                 <div class="login-demo-title">Tài khoản test</div>
                 <div class="login-demo-list">
@@ -49,8 +54,8 @@
                 <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
 
                 <div class="form-field">
-                    <label asp-for="Username" class="form-label">Tên đăng nhập</label>
-                    <input asp-for="Username" class="form-control" autocomplete="username" placeholder="Nhập tên đăng nhập" />
+                    <label asp-for="Username" class="form-label">Tên đăng nhập hoặc email</label>
+                    <input asp-for="Username" class="form-control" autocomplete="username" placeholder="Nhập tên đăng nhập hoặc email" />
                     <span asp-validation-for="Username" class="text-danger"></span>
                 </div>
 
@@ -73,6 +78,7 @@
                         <path fill="currentColor" d="M6.22 3.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 1 1-1.06-1.06L9.94 8 6.22 4.28a.75.75 0 0 1 0-1.06Z" />
                     </svg>
                 </button>
+                <a class="btn btn-outline-primary w-100 mt-3" asp-action="Register">Đăng ký</a>
             </form>
         </div>
     </div>

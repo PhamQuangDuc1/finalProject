@@ -1,0 +1,78 @@
+@model RegisterViewModel
+
+@{
+    ViewData["Title"] = "Đăng ký tài khoản";
+}
+
+<section class="login-page" aria-label="Đăng ký tài khoản StudyMate AI">
+    <div class="login-showcase">
+        <a class="login-brand" asp-controller="Home" asp-action="Index">
+            <span>✦</span>
+            StudyMate AI
+        </a>
+        <div class="login-showcase-copy">
+            <p class="login-kicker">Tạo tài khoản mới</p>
+            <h1>Đăng ký tài khoản và chờ quản trị viên phân quyền.</h1>
+            <p>
+                Bạn chỉ cần nhập thông tin cá nhân. Vai trò Teacher hoặc Student sẽ do Admin phân quyền sau khi kiểm tra.
+            </p>
+        </div>
+        <div class="login-feature-grid" aria-label="Quy trình đăng ký">
+            <span>Đăng ký bằng email</span>
+            <span>Chờ phân quyền</span>
+            <span>Không tự chọn vai trò</span>
+            <span>Bảo mật mật khẩu</span>
+        </div>
+    </div>
+
+    <div class="login-card-shell">
+        <div class="auth-card login-card">
+            <div class="login-card-header">
+                <p class="login-kicker">Tài khoản mới</p>
+                <h1>Đăng ký</h1>
+                <p>Tài khoản sau khi tạo sẽ ở trạng thái chờ Admin phân quyền.</p>
+            </div>
+
+            <form asp-action="Register" method="post" class="login-form">
+                <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                <div class="form-field">
+                    <label asp-for="FullName" class="form-label"></label>
+                    <input asp-for="FullName" class="form-control" autocomplete="name" placeholder="Nhập họ và tên" />
+                    <span asp-validation-for="FullName" class="text-danger"></span>
+                </div>
+
+                <div class="form-field">
+                    <label asp-for="Email" class="form-label"></label>
+                    <input asp-for="Email" class="form-control" autocomplete="email" placeholder="Nhập email" />
+                    <span asp-validation-for="Email" class="text-danger"></span>
+                </div>
+
+                <div class="form-field">
+                    <label asp-for="Username" class="form-label"></label>
+                    <input asp-for="Username" class="form-control" autocomplete="username" placeholder="Nhập tên đăng nhập" />
+                    <span asp-validation-for="Username" class="text-danger"></span>
+                </div>
+
+                <div class="form-field">
+                    <label asp-for="Password" class="form-label"></label>
+                    <input asp-for="Password" class="form-control" autocomplete="new-password" placeholder="Nhập mật khẩu" />
+                    <span asp-validation-for="Password" class="text-danger"></span>
+                </div>
+
+                <div class="form-field">
+                    <label asp-for="ConfirmPassword" class="form-label"></label>
+                    <input asp-for="ConfirmPassword" class="form-control" autocomplete="new-password" placeholder="Nhập lại mật khẩu" />
+                    <span asp-validation-for="ConfirmPassword" class="text-danger"></span>
+                </div>
+
+                <button type="submit" class="btn login-submit">Đăng ký</button>
+                <a class="btn btn-outline-primary w-100 mt-3" asp-action="Login">Quay lại đăng nhập</a>
+            </form>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

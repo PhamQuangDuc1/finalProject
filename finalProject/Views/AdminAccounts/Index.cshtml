@@ -1,0 +1,163 @@
+@model AdminAccountsIndexViewModel
+
+@{
+    ViewData["Title"] = "Quản lý tài khoản";
+}
+
+<div class="admin-page">
+    <div class="admin-hero">
+        <div>
+            <p class="dashboard-kicker">Tài khoản</p>
+            <h1>Quản lý tài khoản</h1>
+            <p>Admin kiểm duyệt tài khoản mới, phân quyền Teacher hoặc Student, khóa và kích hoạt lại tài khoản khi cần.</p>
+        </div>
+        <div class="admin-hero-stat">
+            <span>Tổng tài khoản</span>
+            <strong>@Model.Accounts.Count</strong>
+        </div>
+    </div>
+
+    @if (TempData["StatusMessage"] is string statusMessage)
+    {
+        <div class="alert alert-success" role="alert">@statusMessage</div>
+    }
+    @if (TempData["ErrorMessage"] is string errorMessage)
+    {
+        <div class="alert alert-danger" role="alert">@errorMessage</div>
+    }
+
+    <section class="card-panel admin-panel">
+        <div class="panel-heading">
+            <p class="dashboard-kicker">Bộ lọc</p>
+            <h2 class="section-title">Tìm tài khoản</h2>
+        </div>
+        <form asp-action="Index" method="get" class="row g-3 align-items-end admin-form">
+            <div class="col-md-4">
+                <label asp-for="Search" class="form-label">Tìm kiếm</label>
+                <input asp-for="Search" class="form-control" placeholder="Email, họ tên, tên đăng nhập..." />
+            </div>
+            <div class="col-md-3">
+                <label asp-for="Role" class="form-label">Vai trò</label>
+                <select asp-for="Role" asp-items="Model.RoleOptions" class="form-select">
+                    <option value="">Tất cả vai trò</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label asp-for="AccountStatus" class="form-label">Trạng thái</label>
+                <select asp-for="AccountStatus" asp-items="Model.StatusOptions" class="form-select">
+                    <option value="">Tất cả trạng thái</option>
+                </select>
+            </div>
+            <div class="col-md-2 d-flex gap-2">
+                <button type="submit" class="btn btn-primary admin-primary-action flex-fill">Lọc</button>
+                <a class="btn btn-outline-secondary" asp-action="Index">Xóa</a>
+            </div>
+        </form>
+    </section>
+
+    <section class="card-panel admin-panel">
+        <div class="panel-heading">
+            <p class="dashboard-kicker">Danh sách</p>
+            <h2 class="section-title">Tài khoản trong hệ thống</h2>
+        </div>
+        <div class="table-responsive">
+            <table class="table admin-table align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Họ tên</th>
+                        <th>Email</th>
+                        <th>Tên đăng nhập</th>
+                        <th>Vai trò</th>
+                        <th>Trạng thái</th>
+                        <th>Ngày đăng ký</th>
+                        <th>Ngày phê duyệt</th>
+                        <th>Người phê duyệt</th>
+                        <th>Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @if (Model.Accounts.Count == 0)
+                {
+                    <tr>
+                        <td colspan="9" class="text-muted">Chưa có dữ liệu.</td>
+                    </tr>
+                }
+                else
+                {
+                    @foreach (var account in Model.Accounts)
+                    {
+                        <tr>
+                            <td><strong>@account.FullName</strong></td>
+                            <td>@account.Email</td>
+                            <td>@account.Username</td>
+                            <td>
+                                <span class="badge rounded-pill @GetRoleBadgeClass(account.Role)">@account.RoleLabel</span>
+                            </td>
+                            <td>
+                                <span class="badge rounded-pill @GetStatusBadgeClass(account.AccountStatus)">@account.AccountStatusLabel</span>
+                            </td>
+                            <td>@account.CreatedAt.ToLocalTime().ToString("g")</td>
+                            <td>@(account.ApprovedAt.HasValue ? account.ApprovedAt.Value.ToLocalTime().ToString("g") : "—")</td>
+                            <td>@(string.IsNullOrWhiteSpace(account.ApprovedByAdminName) ? "—" : account.ApprovedByAdminName)</td>
+                            <td>
+                                <div class="d-flex flex-wrap gap-2">
+                                    @if (account.AccountStatus == DAL.Entities.AccountStatus.Pending)
+                                    {
+                                        <form asp-action="AssignRole" method="post" class="d-flex flex-wrap gap-2">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="UserId" value="@account.Id" />
+                                            <select name="Role" class="form-select form-select-sm" required>
+                                                <option value="">Chọn vai trò</option>
+                                                <option value="@DAL.Entities.UserRole.Teacher">Teacher</option>
+                                                <option value="@DAL.Entities.UserRole.Student">Student</option>
+                                            </select>
+                                            <button type="submit" class="btn btn-sm btn-primary">Phân quyền</button>
+                                        </form>
+                                    }
+                                    else if (account.AccountStatus == DAL.Entities.AccountStatus.Active && account.Role != DAL.Entities.UserRole.Admin)
+                                    {
+                                        <form asp-action="Lock" asp-route-id="@account.Id" method="post" onsubmit="return confirm('Khóa tài khoản @account.FullName?');">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">Khóa tài khoản</button>
+                                        </form>
+                                    }
+                                    else if (account.AccountStatus == DAL.Entities.AccountStatus.Locked && account.Role != DAL.Entities.UserRole.Admin)
+                                    {
+                                        <form asp-action="Activate" asp-route-id="@account.Id" method="post">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-sm btn-outline-success">Kích hoạt lại</button>
+                                        </form>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">Không có thao tác</span>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+
+@functions {
+    private static string GetRoleBadgeClass(DAL.Entities.UserRole role) => role switch
+    {
+        DAL.Entities.UserRole.Admin => "text-bg-dark",
+        DAL.Entities.UserRole.Teacher => "text-bg-primary",
+        DAL.Entities.UserRole.Student => "text-bg-info",
+        DAL.Entities.UserRole.Pending => "text-bg-warning",
+        _ => "text-bg-secondary"
+    };
+
+    private static string GetStatusBadgeClass(DAL.Entities.AccountStatus status) => status switch
+    {
+        DAL.Entities.AccountStatus.Active => "text-bg-success",
+        DAL.Entities.AccountStatus.Pending => "text-bg-warning",
+        DAL.Entities.AccountStatus.Locked => "text-bg-danger",
+        _ => "text-bg-secondary"
+    };
+}

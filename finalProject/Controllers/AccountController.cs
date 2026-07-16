@@ -1,4 +1,6 @@
 using System.Security.Claims;
+using BLL.DTOs;
+using BLL.Interfaces;
 using finalProject.ViewModels;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -11,10 +13,14 @@ namespace finalProject.Controllers;
 public class AccountController : Controller
 {
     private readonly StudyMateAuthenticationService _authenticationService;
+    private readonly IUserManagementService _userManagementService;
 
-    public AccountController(StudyMateAuthenticationService authenticationService)
+    public AccountController(
+        StudyMateAuthenticationService authenticationService,
+        IUserManagementService userManagementService)
     {
         _authenticationService = authenticationService;
+        _userManagementService = userManagementService;
     }
 
     [HttpGet]
@@ -34,18 +40,20 @@ public class AccountController : Controller
             return View(model);
         }
 
-        var user = await _authenticationService.AuthenticateAsync(model.Username, model.Password, cancellationToken);
+        var result = await _authenticationService.AuthenticateAsync(model.Username, model.Password, cancellationToken);
 
-        if (user is null)
+        if (!result.Succeeded || result.User is null)
         {
-            ModelState.AddModelError(string.Empty, "Invalid username or password.");
+            ModelState.AddModelError(string.Empty, result.ErrorMessage ?? "Không thể đăng nhập.");
             return View(model);
         }
 
+        var user = result.User;
         var claims = new List<Claim>
         {
             new(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new(ClaimTypes.Name, user.Username),
+            new(ClaimTypes.Email, user.Email),
             new(ClaimTypes.GivenName, user.FullName),
             new(ClaimTypes.Role, user.Role.ToString())
         };
@@ -66,6 +74,43 @@ public class AccountController : Controller
         }
 
         return RedirectToAction("Index", "Dashboard");
+    }
+
+    [HttpGet]
+    [AllowAnonymous]
+    public IActionResult Register()
+    {
+        return View(new RegisterViewModel());
+    }
+
+    [HttpPost]
+    [AllowAnonymous]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Register(RegisterViewModel model, CancellationToken cancellationToken)
+    {
+        if (!ModelState.IsValid)
+        {
+            return View(model);
+        }
+
+        try
+        {
+            await _userManagementService.RegisterAsync(new RegisterDto
+            {
+                FullName = model.FullName,
+                Email = model.Email,
+                Username = model.Username,
+                Password = model.Password
+            }, cancellationToken);
+        }
+        catch (InvalidOperationException ex)
+        {
+            ModelState.AddModelError(string.Empty, ex.Message);
+            return View(model);
+        }
+
+        TempData["StatusMessage"] = "Đăng ký thành công. Tài khoản của bạn đang chờ quản trị viên phân quyền.";
+        return RedirectToAction(nameof(Login));
     }
 
     [Authorize]

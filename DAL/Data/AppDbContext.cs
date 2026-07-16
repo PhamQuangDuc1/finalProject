@@ -66,6 +66,10 @@ public class AppDbContext : DbContext
                 .HasMaxLength(100)
                 .IsRequired();
 
+            entity.Property(user => user.Email)
+                .HasMaxLength(256)
+                .IsRequired();
+
             entity.Property(user => user.PasswordHash)
                 .HasMaxLength(512);
 
@@ -76,9 +80,23 @@ public class AppDbContext : DbContext
             entity.HasIndex(user => user.Username)
                 .IsUnique();
 
-            entity.ToTable(table => table.HasCheckConstraint(
-                "CK_Users_Role",
-                "[Role] IN (0, 1, 2)"));
+            entity.HasIndex(user => user.Email)
+                .IsUnique();
+
+            entity.HasOne(user => user.ApprovedByAdmin)
+                .WithMany(admin => admin.ApprovedAccounts)
+                .HasForeignKey(user => user.ApprovedByAdminId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.ToTable(table =>
+            {
+                table.HasCheckConstraint(
+                    "CK_Users_Role",
+                    "[Role] IN (0, 1, 2, 3)");
+                table.HasCheckConstraint(
+                    "CK_Users_AccountStatus",
+                    "[AccountStatus] IN (0, 1, 2)");
+            });
         });
     }
 
@@ -447,10 +465,10 @@ public class AppDbContext : DbContext
     private static void SeedData(ModelBuilder modelBuilder, DateTime createdAt)
     {
         modelBuilder.Entity<User>().HasData(
-            new User { Id = 1, Username = "admin", PasswordHash = "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92", FullName = "Admin", Role = UserRole.Admin, IsActive = true, CreatedAt = createdAt },
-            new User { Id = 2, Username = "teacherA", PasswordHash = "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92", FullName = "Teacher A", Role = UserRole.Teacher, IsActive = true, CreatedAt = createdAt },
-            new User { Id = 3, Username = "teacherB", PasswordHash = "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92", FullName = "Teacher B", Role = UserRole.Teacher, IsActive = true, CreatedAt = createdAt },
-            new User { Id = 4, Username = "student", PasswordHash = "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92", FullName = "Student", Role = UserRole.Student, IsActive = true, CreatedAt = createdAt });
+            new User { Id = 1, Username = "admin", Email = "admin@studymate.local", PasswordHash = "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92", FullName = "Admin", Role = UserRole.Admin, AccountStatus = AccountStatus.Active, IsActive = true, CreatedAt = createdAt, ApprovedAt = createdAt },
+            new User { Id = 2, Username = "teacherA", Email = "teacherA@studymate.local", PasswordHash = "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92", FullName = "Teacher A", Role = UserRole.Teacher, AccountStatus = AccountStatus.Active, IsActive = true, CreatedAt = createdAt, ApprovedAt = createdAt, ApprovedByAdminId = 1 },
+            new User { Id = 3, Username = "teacherB", Email = "teacherB@studymate.local", PasswordHash = "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92", FullName = "Teacher B", Role = UserRole.Teacher, AccountStatus = AccountStatus.Active, IsActive = true, CreatedAt = createdAt, ApprovedAt = createdAt, ApprovedByAdminId = 1 },
+            new User { Id = 4, Username = "student", Email = "student@studymate.local", PasswordHash = "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92", FullName = "Student", Role = UserRole.Student, AccountStatus = AccountStatus.Active, IsActive = true, CreatedAt = createdAt, ApprovedAt = createdAt, ApprovedByAdminId = 1 });
 
         modelBuilder.Entity<Department>().HasData(
             new Department { Id = 1, Code = "SE", Name = "Bộ môn Kỹ thuật phần mềm", Description = "Quản lý các môn học thuộc nhóm kỹ thuật phần mềm.", ManagerTeacherId = 2, CreatedAt = createdAt });

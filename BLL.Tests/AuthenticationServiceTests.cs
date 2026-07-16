@@ -15,7 +15,9 @@ public class AuthenticationServiceTests
             Id = 2,
             Username = "teacherA",
             FullName = "Teacher A",
+            Email = "teacherA@studymate.local",
             Role = UserRole.Teacher,
+            AccountStatus = AccountStatus.Active,
             IsActive = true,
             PasswordHash = PasswordHashService.HashPassword("123456")
         });
@@ -23,10 +25,11 @@ public class AuthenticationServiceTests
 
         var result = await service.AuthenticateAsync("teacherA", "123456");
 
-        Assert.NotNull(result);
-        Assert.Equal(2, result.Id);
-        Assert.Equal("teacherA", result.Username);
-        Assert.Equal(UserRole.Teacher, result.Role);
+        Assert.True(result.Succeeded);
+        Assert.NotNull(result.User);
+        Assert.Equal(2, result.User.Id);
+        Assert.Equal("teacherA", result.User.Username);
+        Assert.Equal(UserRole.Teacher, result.User.Role);
     }
 
     [Fact]
@@ -36,8 +39,10 @@ public class AuthenticationServiceTests
         {
             Id = 1,
             Username = "admin",
+            Email = "admin@studymate.local",
             FullName = "Admin",
             Role = UserRole.Admin,
+            AccountStatus = AccountStatus.Active,
             IsActive = true,
             PasswordHash = PasswordHashService.HashPassword("123456")
         });
@@ -45,7 +50,7 @@ public class AuthenticationServiceTests
 
         var result = await service.AuthenticateAsync("admin", "wrong-password");
 
-        Assert.Null(result);
+        Assert.False(result.Succeeded);
     }
 
     private sealed class FakeUserRepository : IUserRepository
@@ -67,6 +72,11 @@ public class AuthenticationServiceTests
             return Task.FromResult(string.Equals(_user.Username, username, StringComparison.OrdinalIgnoreCase) ? _user : null);
         }
 
+        public Task<User?> GetByEmailAsync(string email, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(string.Equals(_user.Email, email, StringComparison.OrdinalIgnoreCase) ? _user : null);
+        }
+
         public async Task<User?> ValidateUserAsync(string username, string passwordHash, CancellationToken cancellationToken = default)
         {
             var user = await GetByUsernameAsync(username, cancellationToken);
@@ -79,6 +89,21 @@ public class AuthenticationServiceTests
             IReadOnlyList<User> users = _user.Role == role ? new[] { _user } : Array.Empty<User>();
 
             return Task.FromResult(users);
+        }
+
+        public Task<IReadOnlyList<User>> GetAllAsync(CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult<IReadOnlyList<User>>(new[] { _user });
+        }
+
+        public Task AddAsync(User user, CancellationToken cancellationToken = default)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task UpdateAsync(User user, CancellationToken cancellationToken = default)
+        {
+            throw new NotImplementedException();
         }
     }
 }
