@@ -2,8 +2,9 @@
 
 @{
     ViewData["Title"] = "Thống kê AI & chi phí";
-    var maxDailyTokens = Math.Max(1, Model.Dashboard.DailySummaries.Max(summary => summary.TotalTokens));
-    var maxDailyCost = Math.Max(0.000001m, Model.Dashboard.DailySummaries.Max(summary => summary.EstimatedCost));
+    var dailySummaries = Model.Dashboard.DailySummaries;
+    var maxDailyTokens = Math.Max(1, dailySummaries.Count == 0 ? 0 : dailySummaries.Max(summary => summary.TotalTokens));
+    var maxDailyCost = Math.Max(0.000001m, dailySummaries.Count == 0 ? 0 : dailySummaries.Max(summary => summary.EstimatedCost));
 }
 
 <div class="admin-page">
@@ -15,7 +16,7 @@
         </div>
         <div class="admin-hero-stat">
             <span>Chi phí tháng này</span>
-            <strong>$@Model.Dashboard.EstimatedCostThisMonth.ToString("0.000000")</strong>
+            <strong class="text-success">$@Model.Dashboard.EstimatedCostThisMonth.ToString("0.000000")</strong>
         </div>
     </div>
 
@@ -58,12 +59,12 @@
             <strong>@Model.Dashboard.TotalCompletionTokensThisMonth.ToString("N0")</strong>
         </div>
         <div class="metric-card dashboard-metric-card">
-            <span>Tổng tokens tháng này</span>
-            <strong>@Model.Dashboard.TotalTokensThisMonth.ToString("N0")</strong>
+            <span class="text-primary">Tổng Tokens tháng này</span>
+            <strong class="text-primary">@Model.Dashboard.TotalTokensThisMonth.ToString("N0")</strong>
         </div>
         <div class="metric-card dashboard-metric-card">
-            <span>Chi phí ước tính tháng này</span>
-            <strong>$@Model.Dashboard.EstimatedCostThisMonth.ToString("0.000000")</strong>
+            <span class="text-success">Chi phí ước tính tháng này</span>
+            <strong class="text-success">$@Model.Dashboard.EstimatedCostThisMonth.ToString("0.000000")</strong>
         </div>
         <div class="metric-card dashboard-metric-card">
             <span>Yêu cầu tháng này</span>
@@ -77,67 +78,54 @@
 
     <section class="card-panel admin-panel">
         <div class="panel-heading">
-            <p class="dashboard-kicker">Token</p>
-            <h2 class="section-title">Token sử dụng theo ngày trong tháng</h2>
+            <p class="dashboard-kicker">Theo ngày</p>
+            <h2 class="section-title">Token và chi phí theo ngày</h2>
         </div>
         <div class="table-responsive">
             <table class="table admin-table align-middle mb-0">
                 <thead>
                     <tr>
                         <th>Ngày</th>
-                        <th>Prompt</th>
-                        <th>Completion</th>
-                        <th>Tổng tokens</th>
-                        <th>Yêu cầu</th>
-                        <th style="width: 28%">Mức sử dụng</th>
+                        <th class="text-center">Prompt</th>
+                        <th class="text-center">Completion</th>
+                        <th class="text-primary text-center">Tổng Tokens</th>
+                        <th class="text-center">Yêu cầu</th>
+                        <th class="text-success text-center">Chi phí</th>
+                        <th style="width: 32%">Mức sử dụng</th>
                     </tr>
                 </thead>
                 <tbody>
-                @foreach (var summary in Model.Dashboard.DailySummaries)
+                @foreach (var summary in dailySummaries)
                 {
-                    var width = summary.TotalTokens * 100m / maxDailyTokens;
+                    var tokenWidth = summary.TotalTokens * 100m / maxDailyTokens;
+                    var costWidth = summary.EstimatedCost * 100m / maxDailyCost;
                     <tr>
                         <td>@summary.Date.ToString("dd/MM/yyyy")</td>
-                        <td>@summary.PromptTokens.ToString("N0")</td>
-                        <td>@summary.CompletionTokens.ToString("N0")</td>
-                        <td>@summary.TotalTokens.ToString("N0")</td>
-                        <td>@summary.Requests.ToString("N0")</td>
+                        <td class="text-center">@summary.PromptTokens.ToString("N0")</td>
+                        <td class="text-center">@summary.CompletionTokens.ToString("N0")</td>
+                        <td class="text-primary text-center fw-semibold">@summary.TotalTokens.ToString("N0")</td>
+                        <td class="text-center">@summary.Requests.ToString("N0")</td>
+                        <td class="text-success text-center fw-semibold">$@summary.EstimatedCost.ToString("0.000000")</td>
                         <td>
-                            <div class="progress admin-progress">
-                                <div class="progress-bar" style="width: @width.ToString("0.##")%"></div>
-                            </div>
-                        </td>
-                    </tr>
-                }
-                </tbody>
-            </table>
-        </div>
-    </section>
-
-    <section class="card-panel admin-panel">
-        <div class="panel-heading">
-            <p class="dashboard-kicker">Chi phí</p>
-            <h2 class="section-title">Chi phí theo ngày</h2>
-        </div>
-        <div class="table-responsive">
-            <table class="table admin-table align-middle mb-0">
-                <thead>
-                    <tr>
-                        <th>Ngày</th>
-                        <th>Chi phí ước tính</th>
-                        <th style="width: 35%">Xu hướng chi phí</th>
-                    </tr>
-                </thead>
-                <tbody>
-                @foreach (var summary in Model.Dashboard.DailySummaries)
-                {
-                    var width = summary.EstimatedCost * 100m / maxDailyCost;
-                    <tr>
-                        <td>@summary.Date.ToString("dd/MM/yyyy")</td>
-                        <td>$@summary.EstimatedCost.ToString("0.000000")</td>
-                        <td>
-                            <div class="progress admin-progress">
-                                <div class="progress-bar bg-success" style="width: @width.ToString("0.##")%"></div>
+                            <div class="d-flex flex-column gap-2">
+                                <div>
+                                    <div class="d-flex justify-content-between small text-primary mb-1">
+                                        <span>Token</span>
+                                        <span>@summary.TotalTokens.ToString("N0")</span>
+                                    </div>
+                                    <div class="progress admin-progress">
+                                        <div class="progress-bar bg-primary" style="width: @tokenWidth.ToString("0.##")%"></div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="d-flex justify-content-between small text-success mb-1">
+                                        <span>Chi phí</span>
+                                        <span>$@summary.EstimatedCost.ToString("0.000000")</span>
+                                    </div>
+                                    <div class="progress admin-progress">
+                                        <div class="progress-bar bg-success" style="width: @costWidth.ToString("0.##")%"></div>
+                                    </div>
+                                </div>
                             </div>
                         </td>
                     </tr>
@@ -158,9 +146,9 @@
                     <thead>
                         <tr>
                             <th>Model</th>
-                            <th>Tổng tokens</th>
-                            <th>Yêu cầu</th>
-                            <th>Chi phí ước tính</th>
+                            <th class="text-primary text-center">Tổng Tokens</th>
+                            <th class="text-center">Yêu cầu</th>
+                            <th class="text-success text-center">Chi phí</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -176,9 +164,9 @@
                         {
                             <tr>
                                 <td>@summary.ModelName</td>
-                                <td>@summary.TotalTokens.ToString("N0")</td>
-                                <td>@summary.Requests.ToString("N0")</td>
-                                <td>$@summary.EstimatedCost.ToString("0.000000")</td>
+                                <td class="text-primary text-center fw-semibold">@summary.TotalTokens.ToString("N0")</td>
+                                <td class="text-center">@summary.Requests.ToString("N0")</td>
+                                <td class="text-success text-center fw-semibold">$@summary.EstimatedCost.ToString("0.000000")</td>
                             </tr>
                         }
                     }
@@ -197,9 +185,9 @@
                     <thead>
                         <tr>
                             <th>Tác vụ</th>
-                            <th>Tổng tokens</th>
-                            <th>Yêu cầu</th>
-                            <th>Chi phí ước tính</th>
+                            <th class="text-primary text-center">Tổng Tokens</th>
+                            <th class="text-center">Yêu cầu</th>
+                            <th class="text-success text-center">Chi phí</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -215,9 +203,9 @@
                         {
                             <tr>
                                 <td>@GetOperationLabel(summary.OperationType)</td>
-                                <td>@summary.TotalTokens.ToString("N0")</td>
-                                <td>@summary.Requests.ToString("N0")</td>
-                                <td>$@summary.EstimatedCost.ToString("0.000000")</td>
+                                <td class="text-primary text-center fw-semibold">@summary.TotalTokens.ToString("N0")</td>
+                                <td class="text-center">@summary.Requests.ToString("N0")</td>
+                                <td class="text-success text-center fw-semibold">$@summary.EstimatedCost.ToString("0.000000")</td>
                             </tr>
                         }
                     }

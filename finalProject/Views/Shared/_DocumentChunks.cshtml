@@ -1,23 +1,24 @@
 @model BLL.DTOs.DocumentDto
 
-<section class="card-panel mb-4" data-document-detail-id="@Model.Id">
+<section class="card-panel mb-4" data-document-detail-id="@Model.Id" data-document-snapshot-url="@Url.Action("RealtimeSnapshot", "Documents", new { id = Model.Id })">
     <div class="d-flex align-items-center justify-content-between gap-3 mb-3">
         <div>
-            <h2 class="section-title mb-1">Noi dung da chunk</h2>
-            <p class="text-muted mb-0">Dang hien thi @Model.Chunks.Count chunk theo thu tu index.</p>
+            <h2 class="section-title mb-1">Nội dung đã chunk</h2>
+            <p class="text-muted mb-0" data-document-chunk-summary>Đang hiển thị @Model.Chunks.Count chunk theo thứ tự index.</p>
         </div>
-        <span class="badge text-bg-secondary" id="documentRealtimeStatus">Connecting</span>
+        <span class="badge text-bg-secondary" id="documentRealtimeStatus">Đang kết nối</span>
     </div>
 
     <div class="alert alert-info d-none" data-document-detail-alert role="alert"></div>
 
-    @if (Model.Chunks.Count == 0)
-    {
-        <p class="text-muted mb-0">Tai lieu nay chua co chunk de hien thi.</p>
-    }
-    else
-    {
-        <div class="chunk-list">
+    <div data-document-chunks>
+        @if (Model.Chunks.Count == 0)
+        {
+            <p class="text-muted mb-0">Tài liệu này chưa có chunk để hiển thị.</p>
+        }
+        else
+        {
+            <div class="chunk-list">
             @foreach (var chunk in Model.Chunks)
             {
                 <article class="chunk-item">
@@ -25,11 +26,12 @@
                         <strong>Chunk #@chunk.ChunkIndex</strong>
                         <span>@chunk.WordCount word</span>
                         <span>@chunk.TokenCount token</span>
-                        <span>Vi tri @chunk.StartPosition-@chunk.EndPosition</span>
+                        <span>Vị trí @chunk.StartPosition-@chunk.EndPosition</span>
                     </div>
                     <pre class="chunk-content">@chunk.Content</pre>
                 </article>
             }
-        </div>
-    }
+            </div>
+        }
+    </div>
 </section>

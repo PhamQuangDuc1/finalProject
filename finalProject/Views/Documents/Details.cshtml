@@ -6,8 +6,10 @@
 
 <div class="d-flex align-items-center justify-content-between mb-3">
     <div>
-        <h1 class="h3 mb-1">@Model.Title</h1>
-        <p class="text-muted mb-0">@Model.SubjectName - @Model.UploadedByTeacherName</p>
+        <h1 class="h3 mb-1" data-document-title>@Model.Title</h1>
+        <p class="text-muted mb-0">
+            <span data-document-subject>@Model.SubjectName</span> - <span data-document-teacher>@Model.UploadedByTeacherName</span>
+        </p>
     </div>
     <div class="d-flex flex-wrap gap-2">
         <a class="btn btn-outline-secondary" asp-action="Index">Quay lại</a>
@@ -28,15 +30,15 @@
         <div class="col-md-6"><div class="text-muted">Môn học</div><div class="fw-semibold">@Model.SubjectName</div></div>
         <div class="col-md-6"><div class="text-muted">Bộ môn</div><div class="fw-semibold">@Model.DepartmentName</div></div>
         <div class="col-md-6"><div class="text-muted">Người tải lên</div><div class="fw-semibold">@Model.UploadedByTeacherName</div></div>
-        <div class="col-md-6"><div class="text-muted">Trạng thái</div><div class="fw-semibold">@Model.Status</div></div>
+        <div class="col-md-6"><div class="text-muted">Trạng thái</div><div class="fw-semibold" data-document-status-detail>@Model.Status</div></div>
         <div class="col-md-6"><div class="text-muted">File gốc</div><div class="fw-semibold">@Model.FileName</div></div>
-        <div class="col-md-6"><div class="text-muted">Số đoạn dữ liệu</div><div class="fw-semibold">@Model.ChunkCount</div></div>
-        <div class="col-md-6"><div class="text-muted">Phiên bản nội dung</div><div class="fw-semibold">@Model.ContentVersion</div></div>
+        <div class="col-md-6"><div class="text-muted">Số đoạn dữ liệu</div><div class="fw-semibold" data-document-chunk-count>@Model.ChunkCount</div></div>
+        <div class="col-md-6"><div class="text-muted">Phiên bản nội dung</div><div class="fw-semibold" data-document-content-version>@Model.ContentVersion</div></div>
         <div class="col-md-6"><div class="text-muted">Ngày tải lên</div><div class="fw-semibold">@Model.UploadedAtUtc.ToLocalTime().ToString("g")</div></div>
-        @if (Model.ContentUpdatedAtUtc.HasValue)
-        {
-            <div class="col-md-6"><div class="text-muted">Cập nhật nội dung</div><div class="fw-semibold">@Model.ContentUpdatedAtUtc.Value.ToLocalTime().ToString("g")</div></div>
-        }
+        <div class="col-md-6 @(Model.ContentUpdatedAtUtc.HasValue ? string.Empty : "d-none")" data-document-content-updated-wrapper>
+            <div class="text-muted">Cập nhật nội dung</div>
+            <div class="fw-semibold" data-document-content-updated>@(Model.ContentUpdatedAtUtc.HasValue ? Model.ContentUpdatedAtUtc.Value.ToLocalTime().ToString("g") : string.Empty)</div>
+        </div>
         @if (Model.ArchivedAtUtc.HasValue)
         {
             <div class="col-md-6"><div class="text-muted">Lưu trữ lúc</div><div class="fw-semibold">@Model.ArchivedAtUtc.Value.ToLocalTime().ToString("g")</div></div>
@@ -46,20 +48,22 @@
 
 <section class="card-panel mb-4">
     <h2 class="section-title">Mô tả</h2>
-    <p class="mb-0">@(string.IsNullOrWhiteSpace(Model.Description) ? "Chưa có mô tả." : Model.Description)</p>
+    <p class="mb-0" data-document-description>@(string.IsNullOrWhiteSpace(Model.Description) ? "Chưa có mô tả." : Model.Description)</p>
 </section>
 
 <partial name="_DocumentChunks" model="Model" />
 <section class="card-panel mb-4">
     <h2 class="section-title">Nội dung hiện tại</h2>
-    @if (string.IsNullOrWhiteSpace(Model.CurrentContent))
-    {
-        <p class="text-muted mb-0">Chưa có nội dung được trích xuất.</p>
-    }
-    else
-    {
-        <pre class="mb-0 p-3 bg-light border rounded text-wrap" style="white-space: pre-wrap;">@Model.CurrentContent</pre>
-    }
+    <div data-document-current-content>
+        @if (string.IsNullOrWhiteSpace(Model.CurrentContent))
+        {
+            <p class="text-muted mb-0">Chưa có nội dung được trích xuất.</p>
+        }
+        else
+        {
+            <pre class="mb-0 p-3 bg-light border rounded text-wrap" style="white-space: pre-wrap;">@Model.CurrentContent</pre>
+        }
+    </div>
 </section>
 
 @if (Model.Versions.Count > 0)

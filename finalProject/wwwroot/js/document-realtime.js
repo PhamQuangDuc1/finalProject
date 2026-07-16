@@ -9,8 +9,12 @@
     const notificationsBody = document.getElementById("documentRealtimeNotifications");
     const mode = realtimeRoot.getAttribute("data-document-realtime");
     const detailDocumentId = Number(realtimeRoot.getAttribute("data-document-detail-id") || 0);
+    const detailSnapshotUrl = realtimeRoot.getAttribute("data-document-snapshot-url");
     const detailAlert = document.querySelector("[data-document-detail-alert]");
     const eventNames = ["DocumentCreated", "DocumentUpdated", "DocumentArchived", "DocumentReindexed"];
+
+    let isRefreshingDetail = false;
+    let shouldRefreshAgain = false;
 
     function setStatus(text, cssClass) {
         if (!statusBadge) {
@@ -33,6 +37,22 @@
     function formatTime(value) {
         const date = value ? new Date(value) : new Date();
         return Number.isNaN(date.getTime()) ? new Date().toLocaleString() : date.toLocaleString();
+    }
+
+    function setText(selector, value) {
+        const element = document.querySelector(selector);
+        if (element) {
+            element.textContent = value || "";
+        }
+    }
+
+    function showDetailMessage(message, cssClass) {
+        if (!detailAlert) {
+            return;
+        }
+
+        detailAlert.textContent = message;
+        detailAlert.className = `alert ${cssClass || "alert-info"}`;
     }
 
     function prependNotification(payload) {
@@ -139,23 +159,159 @@
         }, 2400);
     }
 
+    function renderCurrentContent(content) {
+        const container = document.querySelector("[data-document-current-content]");
+        if (!container) {
+            return;
+        }
+
+        container.innerHTML = "";
+        if (!content || !content.trim()) {
+            const empty = document.createElement("p");
+            empty.className = "text-muted mb-0";
+            empty.textContent = "Chưa có nội dung được trích xuất.";
+            container.appendChild(empty);
+            return;
+        }
+
+        const pre = document.createElement("pre");
+        pre.className = "mb-0 p-3 bg-light border rounded text-wrap";
+        pre.style.whiteSpace = "pre-wrap";
+        pre.textContent = content;
+        container.appendChild(pre);
+    }
+
+    function renderChunks(chunks) {
+        const container = document.querySelector("[data-document-chunks]");
+        const summary = document.querySelector("[data-document-chunk-summary]");
+        const safeChunks = Array.isArray(chunks) ? chunks : [];
+
+        if (summary) {
+            summary.textContent = `Đang hiển thị ${safeChunks.length} chunk theo thứ tự index.`;
+        }
+
+        if (!container) {
+            return;
+        }
+
+        container.innerHTML = "";
+        if (safeChunks.length === 0) {
+            const empty = document.createElement("p");
+            empty.className = "text-muted mb-0";
+            empty.textContent = "Tài liệu này chưa có chunk để hiển thị.";
+            container.appendChild(empty);
+            return;
+        }
+
+        const list = document.createElement("div");
+        list.className = "chunk-list";
+
+        for (const chunk of safeChunks) {
+            const item = document.createElement("article");
+            item.className = "chunk-item";
+
+            const meta = document.createElement("div");
+            meta.className = "chunk-meta";
+            meta.innerHTML = `
+                <strong>Chunk #${escapeHtml(chunk.chunkIndex)}</strong>
+                <span>${escapeHtml(chunk.wordCount)} word</span>
+                <span>${escapeHtml(chunk.tokenCount)} token</span>
+                <span>Vị trí ${escapeHtml(chunk.startPosition)}-${escapeHtml(chunk.endPosition)}</span>`;
+
+            const content = document.createElement("pre");
+            content.className = "chunk-content";
+            content.textContent = chunk.content || "";
+
+            item.appendChild(meta);
+            item.appendChild(content);
+            list.appendChild(item);
+        }
+
+        container.appendChild(list);
+    }
+
+    function updateDetailFromSnapshot(snapshot) {
+        setText("[data-document-title]", snapshot.title);
+        setText("[data-document-subject]", snapshot.subjectName);
+        setText("[data-document-teacher]", snapshot.uploadedByTeacherName);
+        setText("[data-document-status-detail]", snapshot.status);
+        setText("[data-document-chunk-count]", String(snapshot.chunkCount ?? 0));
+        setText("[data-document-content-version]", String(snapshot.contentVersion ?? ""));
+        setText("[data-document-description]", snapshot.description && snapshot.description.trim() ? snapshot.description : "Chưa có mô tả.");
+
+        const updatedWrapper = document.querySelector("[data-document-content-updated-wrapper]");
+        const updatedText = document.querySelector("[data-document-content-updated]");
+        if (updatedWrapper && updatedText) {
+            if (snapshot.contentUpdatedAtText) {
+                updatedText.textContent = snapshot.contentUpdatedAtText;
+                updatedWrapper.classList.remove("d-none");
+            } else {
+                updatedText.textContent = "";
+                updatedWrapper.classList.add("d-none");
+            }
+        }
+
+        renderCurrentContent(snapshot.currentContent || "");
+        renderChunks(snapshot.chunks);
+    }
+
+    async function refreshDetailFromServer() {
+        if (!detailDocumentId || !detailSnapshotUrl) {
+            return false;
+        }
+
+        if (isRefreshingDetail) {
+            shouldRefreshAgain = true;
+            return true;
+        }
+
+        isRefreshingDetail = true;
+        try {
+            const response = await fetch(detailSnapshotUrl, {
+                method: "GET",
+                credentials: "same-origin",
+                headers: {
+                    "Accept": "application/json"
+                }
+            });
+            if (!response.ok) {
+                throw new Error("Không thể lấy dữ liệu tài liệu mới nhất.");
+            }
+
+            const snapshot = await response.json();
+            updateDetailFromSnapshot(snapshot);
+            return true;
+        } finally {
+            isRefreshingDetail = false;
+            if (shouldRefreshAgain) {
+                shouldRefreshAgain = false;
+                refreshDetailFromServer();
+            }
+        }
+    }
+
     function updateDetailPage(eventName, payload) {
         if (!detailDocumentId || Number(payload.documentId) !== detailDocumentId) {
             return;
         }
 
-        if (detailAlert) {
-            detailAlert.textContent = eventName === "DocumentReindexed"
-                ? "Tai lieu vua duoc re-index. Trang se tai lai de cap nhat noi dung chunk."
-                : `Tai lieu vua duoc cap nhat: ${payload.action || eventName}.`;
-            detailAlert.classList.remove("d-none");
-        }
+        showDetailMessage("Đã nhận cập nhật realtime. Đang đồng bộ nội dung mới...", "alert-info");
 
-        if (eventName === "DocumentReindexed") {
-            window.setTimeout(function () {
-                window.location.reload();
-            }, 1200);
-        }
+        refreshDetailFromServer()
+            .then(function (updated) {
+                if (updated) {
+                    const message = eventName === "DocumentReindexed"
+                        ? "Tài liệu vừa được tạo lại chỉ mục. Nội dung và chunk đã được đồng bộ tự động."
+                        : "Tài liệu vừa được cập nhật. Nội dung mới đã hiển thị tự động.";
+                    showDetailMessage(message, "alert-success");
+                    return;
+                }
+
+                showDetailMessage("Tài liệu vừa được cập nhật. Vui lòng tải lại trang để xem nội dung mới nhất.", "alert-warning");
+            })
+            .catch(function () {
+                showDetailMessage("Không thể tự đồng bộ nội dung mới. Vui lòng tải lại trang.", "alert-warning");
+            });
     }
 
     function handleInvocation(message) {

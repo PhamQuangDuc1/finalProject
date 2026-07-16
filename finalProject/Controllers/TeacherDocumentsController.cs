@@ -124,7 +124,7 @@ public class TeacherDocumentsController : Controller
             return View(model);
         }
 
-        await BroadcastDocumentEventAsync("DocumentCreated", "Created", documentId, currentUser, cancellationToken);
+        await BroadcastDocumentEventAsync("DocumentCreated", "Tạo mới", documentId, currentUser, cancellationToken);
 
         TempData["StatusMessage"] = $"Da upload tai lieu #{documentId}. He thong da xu ly chunk va index theo cau hinh hien tai.";
 
@@ -241,7 +241,7 @@ public class TeacherDocumentsController : Controller
             return RedirectToAction(nameof(Details), new { id });
         }
 
-        await BroadcastDocumentEventAsync("DocumentUpdated", "Archive scheduled", id, currentUser, cancellationToken);
+        await BroadcastDocumentEventAsync("DocumentUpdated", "Đã lên lịch ẩn", id, currentUser, cancellationToken);
 
         TempData["StatusMessage"] = "Da len lich an tai lieu.";
 
@@ -267,7 +267,7 @@ public class TeacherDocumentsController : Controller
             return RedirectToAction(nameof(Details), new { id });
         }
 
-        await BroadcastDocumentEventAsync("DocumentReindexed", "Re-indexed", id, currentUser, cancellationToken);
+        await BroadcastDocumentEventAsync("DocumentReindexed", "Tạo lại chỉ mục", id, currentUser, cancellationToken);
 
         TempData["StatusMessage"] = "Da re-index tai lieu theo cau hinh chunk hien tai.";
 
