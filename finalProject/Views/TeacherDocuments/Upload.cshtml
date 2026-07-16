@@ -4,50 +4,66 @@
     ViewData["Title"] = "Tải tài liệu lên";
 }
 
-<section class="card-panel col-lg-8">
-    <h1 class="section-title">Tải tài liệu lên</h1>
-    <form asp-action="Upload" method="post" enctype="multipart/form-data">
-        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
-
-        <div class="mb-3">
-            <label asp-for="Title" class="form-label"></label>
-            <input asp-for="Title" class="form-control" />
-            <span asp-validation-for="Title" class="text-danger"></span>
+<div class="admin-page">
+    <div class="admin-hero">
+        <div>
+            <p class="dashboard-kicker">Upload</p>
+            <h1>Tải tài liệu lên</h1>
+            <p>Đưa tài liệu học tập vào hệ thống để StudyMate AI index, chia chunk và phục vụ hỏi đáp theo ngữ cảnh.</p>
         </div>
+        <a class="btn btn-outline-primary admin-primary-action" asp-action="Index">Quay lại danh sách</a>
+    </div>
 
-        <div class="mb-3">
-            <label asp-for="SubjectId" class="form-label"></label>
-            <select asp-for="SubjectId" asp-items="Model.SubjectOptions" class="form-select">
-                <option value="">Chọn môn học được phân công</option>
-            </select>
-            <span asp-validation-for="SubjectId" class="text-danger"></span>
+    <section class="card-panel admin-panel admin-form-panel">
+        <div class="panel-heading">
+            <p class="dashboard-kicker">Thông tin tài liệu</p>
+            <h2 class="section-title">Biểu mẫu upload</h2>
         </div>
+        <form asp-action="Upload" method="post" enctype="multipart/form-data" class="admin-form">
+            <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
 
-        <div class="mb-3">
-            <label asp-for="ChapterId" class="form-label"></label>
-            <select asp-for="ChapterId" asp-items="Model.ChapterOptions" class="form-select">
-                <option value="">Không gán chương</option>
-            </select>
-            <span asp-validation-for="ChapterId" class="text-danger"></span>
-        </div>
+            <div class="mb-3">
+                <label asp-for="Title" class="form-label">Tiêu đề</label>
+                <input asp-for="Title" class="form-control" placeholder="Nhập tiêu đề tài liệu" />
+                <span asp-validation-for="Title" class="text-danger"></span>
+            </div>
 
-        <div class="mb-3">
-            <label asp-for="Description" class="form-label"></label>
-            <textarea asp-for="Description" class="form-control" rows="4"></textarea>
-            <span asp-validation-for="Description" class="text-danger"></span>
-        </div>
+            <div class="mb-3">
+                <label asp-for="SubjectId" class="form-label">Môn học</label>
+                <select asp-for="SubjectId" asp-items="Model.SubjectOptions" class="form-select">
+                    <option value="">Chọn môn học được phân công</option>
+                </select>
+                <span asp-validation-for="SubjectId" class="text-danger"></span>
+            </div>
 
-        <div class="mb-3">
-            <label asp-for="File" class="form-label"></label>
-            <input asp-for="File" class="form-control" accept=".pdf,.docx,.pptx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation" />
-            <div class="form-text">Chỉ hỗ trợ PDF, DOCX hoặc PPTX.</div>
-            <span asp-validation-for="File" class="text-danger"></span>
-        </div>
+            <div class="mb-3">
+                <label asp-for="ChapterId" class="form-label">Chương</label>
+                <select asp-for="ChapterId" asp-items="Model.ChapterOptions" class="form-select">
+                    <option value="">Không gán chương</option>
+                </select>
+                <span asp-validation-for="ChapterId" class="text-danger"></span>
+            </div>
 
-        <button type="submit" class="btn btn-primary">Upload</button>
-        <a class="btn btn-outline-secondary" asp-action="Index">Hủy</a>
-    </form>
-</section>
+            <div class="mb-3">
+                <label asp-for="Description" class="form-label">Mô tả</label>
+                <textarea asp-for="Description" class="form-control" rows="5" placeholder="Mô tả ngắn về nội dung tài liệu"></textarea>
+                <span asp-validation-for="Description" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="File" class="form-label">Tệp tài liệu</label>
+                <input asp-for="File" class="form-control" accept=".pdf,.docx,.pptx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation" />
+                <div class="form-text">Chỉ hỗ trợ PDF, DOCX hoặc PPTX.</div>
+                <span asp-validation-for="File" class="text-danger"></span>
+            </div>
+
+            <div class="d-flex flex-wrap gap-2">
+                <button type="submit" class="btn btn-primary admin-primary-action">Upload</button>
+                <a class="btn btn-outline-secondary admin-primary-action" asp-action="Index">Hủy</a>
+            </div>
+        </form>
+    </section>
+</div>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />

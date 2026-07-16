@@ -4,87 +4,101 @@
     ViewData["Title"] = "Quản lý tài liệu";
 }
 
-<div class="d-flex align-items-center justify-content-between mb-3">
-    <div>
-        <h1 class="h3 mb-1">Quản lý tài liệu</h1>
-        <p class="text-muted mb-0">Admin chỉ xem tổng quan, không upload, sửa, archive hoặc re-index tài liệu.</p>
+<div class="admin-page">
+    <div class="admin-hero">
+        <div>
+            <p class="dashboard-kicker">Tài liệu</p>
+            <h1>Quản lý tài liệu</h1>
+            <p>Admin theo dõi tổng quan tài liệu, trạng thái xử lý và thông báo realtime trong toàn hệ thống.</p>
+        </div>
+        <div class="admin-hero-stat">
+            <span>Tổng tài liệu</span>
+            <strong>@Model.Count</strong>
+        </div>
     </div>
-</div>
 
-@if (TempData["StatusMessage"] is string statusMessage)
-{
-    <div class="alert alert-info" role="alert">@statusMessage</div>
-}
+    @if (TempData["StatusMessage"] is string statusMessage)
+    {
+        <div class="alert alert-info" role="alert">@statusMessage</div>
+    }
 
-<section class="card-panel mb-4" data-document-realtime="admin">
-    <div class="d-flex align-items-center justify-content-between mb-2">
-        <h2 class="section-title mb-0">Realtime document notifications</h2>
-        <span class="badge text-bg-secondary" id="documentRealtimeStatus">Connecting</span>
-    </div>
-    <div class="table-responsive">
-        <table class="table table-sm align-middle mb-0">
-            <thead>
-                <tr>
-                    <th>Teacher uploader</th>
-                    <th>Document</th>
-                    <th>Subject</th>
-                    <th>Action</th>
-                    <th>Time</th>
-                </tr>
-            </thead>
-            <tbody id="documentRealtimeNotifications">
-                <tr data-empty-realtime-row="true">
-                    <td colspan="5" class="text-muted">Chưa có notification realtime trong phiên này.</td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-</section>
+    <section class="card-panel admin-panel" data-document-realtime="admin">
+        <div class="panel-heading panel-heading-inline">
+            <div>
+                <p class="dashboard-kicker">Realtime</p>
+                <h2 class="section-title">Thông báo tài liệu realtime</h2>
+            </div>
+            <span class="badge text-bg-secondary" id="documentRealtimeStatus">Đang kết nối</span>
+        </div>
+        <div class="table-responsive">
+            <table class="table admin-table table-sm align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Giảng viên upload</th>
+                        <th>Tài liệu</th>
+                        <th>Môn học</th>
+                        <th>Hành động</th>
+                        <th>Thời gian</th>
+                    </tr>
+                </thead>
+                <tbody id="documentRealtimeNotifications">
+                    <tr data-empty-realtime-row="true">
+                        <td colspan="5" class="text-muted">Chưa có thông báo realtime trong phiên này.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
 
-<section class="card-panel">
-    <div class="table-responsive">
-        <table class="table table-striped align-middle mb-0">
-            <thead>
-                <tr>
-                    <th>Tiêu đề</th>
-                    <th>Môn học</th>
-                    <th>Bộ môn</th>
-                    <th>Người upload</th>
-                    <th>Ngày upload</th>
-                    <th>Trạng thái</th>
-                    <th>Số chunk</th>
-                    <th>Thao tác</th>
-                </tr>
-            </thead>
-            <tbody data-documents-table-body>
-            @if (Model.Count == 0)
-            {
-                <tr data-empty-documents-row="true">
-                    <td colspan="8" class="text-muted">Chưa có tài liệu nào được đăng ký.</td>
-                </tr>
-            }
-            else
-            {
-                @foreach (var document in Model)
+    <section class="card-panel admin-panel">
+        <div class="panel-heading">
+            <p class="dashboard-kicker">Danh sách</p>
+            <h2 class="section-title">Tài liệu đã đăng ký</h2>
+        </div>
+        <div class="table-responsive">
+            <table class="table admin-table align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Tiêu đề</th>
+                        <th>Môn học</th>
+                        <th>Bộ môn</th>
+                        <th>Người upload</th>
+                        <th>Ngày upload</th>
+                        <th>Trạng thái</th>
+                        <th>Số chunk</th>
+                        <th>Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody data-documents-table-body>
+                @if (Model.Count == 0)
                 {
-                    <tr data-document-id="@document.Id">
-                        <td>@document.Title</td>
-                        <td>@document.SubjectName</td>
-                        <td>@document.DepartmentName</td>
-                        <td>@document.UploadedByTeacherName</td>
-                        <td>@document.UploadedAtUtc.ToLocalTime().ToString("g")</td>
-                        <td data-document-status>@document.Status</td>
-                        <td>@document.ChunkCount</td>
-                        <td>
-                            <div class="btn-group btn-group-sm" role="group">
-                                <a class="btn btn-outline-primary" asp-action="Details" asp-route-id="@document.Id">Xem</a>
-                                <a class="btn btn-outline-primary" asp-action="Download" asp-route-id="@document.Id">Tải xuống</a>
-                            </div>
-                        </td>
+                    <tr data-empty-documents-row="true">
+                        <td colspan="8" class="text-muted">Chưa có tài liệu nào được đăng ký.</td>
                     </tr>
                 }
-            }
-            </tbody>
-        </table>
-    </div>
-</section>
+                else
+                {
+                    @foreach (var document in Model)
+                    {
+                        <tr data-document-id="@document.Id">
+                            <td><strong>@document.Title</strong></td>
+                            <td>@document.SubjectName</td>
+                            <td>@document.DepartmentName</td>
+                            <td>@document.UploadedByTeacherName</td>
+                            <td>@document.UploadedAtUtc.ToLocalTime().ToString("g")</td>
+                            <td data-document-status><span class="badge rounded-pill text-bg-light">@document.Status</span></td>
+                            <td>@document.ChunkCount</td>
+                            <td>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <a class="btn btn-outline-primary" asp-action="Details" asp-route-id="@document.Id">Xem</a>
+                                    <a class="btn btn-outline-primary" asp-action="Download" asp-route-id="@document.Id">Tải xuống</a>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>

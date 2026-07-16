@@ -4,80 +4,93 @@
     ViewData["Title"] = "Cấu hình Chunk";
 }
 
-<div class="d-flex align-items-center justify-content-between mb-3">
-    <div>
-        <h1 class="h3 mb-1">Cấu hình Chunk</h1>
-        <p class="text-muted mb-0">Thiết lập cách hệ thống chia nội dung tài liệu khi index.</p>
+<div class="admin-page">
+    <div class="admin-hero">
+        <div>
+            <p class="dashboard-kicker">Xử lý tài liệu</p>
+            <h1>Cấu hình Chunk</h1>
+            <p>Thiết lập cách hệ thống chia nội dung tài liệu khi index để phục vụ tìm kiếm và hỏi đáp AI.</p>
+        </div>
+        <div class="admin-hero-stat">
+            <span>Top-K</span>
+            <strong>@Model.TopK</strong>
+        </div>
     </div>
+
+    @if (TempData["StatusMessage"] is string statusMessage)
+    {
+        <div class="alert alert-info" role="alert">@statusMessage</div>
+    }
+
+    <section class="card-panel admin-panel">
+        <div class="panel-heading">
+            <p class="dashboard-kicker">Hiện tại</p>
+            <h2 class="section-title">Cấu hình đang áp dụng</h2>
+        </div>
+        <div class="admin-setting-grid">
+            <div class="admin-setting-item">
+                <span>Chiến lược</span>
+                <strong>@Model.ChunkStrategy</strong>
+            </div>
+            <div class="admin-setting-item">
+                <span>Kích thước chunk</span>
+                <strong>@Model.ChunkSize</strong>
+            </div>
+            <div class="admin-setting-item">
+                <span>Độ chồng lặp</span>
+                <strong>@Model.ChunkOverlap</strong>
+            </div>
+            <div class="admin-setting-item">
+                <span>Top-K</span>
+                <strong>@Model.TopK</strong>
+            </div>
+            <div class="admin-setting-item">
+                <span>Cập nhật lần cuối</span>
+                <strong>@Model.UpdatedAt.ToLocalTime().ToString("g")</strong>
+            </div>
+            <div class="admin-setting-item">
+                <span>Người cập nhật</span>
+                <strong>@(string.IsNullOrWhiteSpace(Model.UpdatedByAdminName) ? "Admin" : Model.UpdatedByAdminName)</strong>
+            </div>
+        </div>
+    </section>
+
+    <section class="card-panel admin-panel admin-form-panel">
+        <div class="panel-heading">
+            <p class="dashboard-kicker">Cập nhật</p>
+            <h2 class="section-title">Cập nhật cấu hình</h2>
+        </div>
+        <form asp-action="Index" method="post" class="admin-form">
+            <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+            <div class="mb-3">
+                <label asp-for="ChunkStrategy" class="form-label">Chiến lược chunk</label>
+                <select asp-for="ChunkStrategy" asp-items="Model.StrategyOptions" class="form-select"></select>
+                <span asp-validation-for="ChunkStrategy" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="ChunkSize" class="form-label">Kích thước chunk</label>
+                <input asp-for="ChunkSize" class="form-control" type="number" min="1" />
+                <span asp-validation-for="ChunkSize" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="ChunkOverlap" class="form-label">Độ chồng lặp</label>
+                <input asp-for="ChunkOverlap" class="form-control" type="number" min="0" />
+                <span asp-validation-for="ChunkOverlap" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="TopK" class="form-label">Top-K</label>
+                <input asp-for="TopK" class="form-control" type="number" min="1" max="50" />
+                <span asp-validation-for="TopK" class="text-danger"></span>
+            </div>
+
+            <button type="submit" class="btn btn-primary admin-primary-action">Lưu cấu hình</button>
+        </form>
+    </section>
 </div>
-
-@if (TempData["StatusMessage"] is string statusMessage)
-{
-    <div class="alert alert-info" role="alert">@statusMessage</div>
-}
-
-<section class="card-panel mb-4">
-    <h2 class="section-title">Current settings</h2>
-    <div class="row g-3">
-        <div class="col-md-3">
-            <div class="text-muted">Strategy</div>
-            <div class="fw-semibold">@Model.ChunkStrategy</div>
-        </div>
-        <div class="col-md-3">
-            <div class="text-muted">Chunk Size</div>
-            <div class="fw-semibold">@Model.ChunkSize</div>
-        </div>
-        <div class="col-md-3">
-            <div class="text-muted">Chunk Overlap</div>
-            <div class="fw-semibold">@Model.ChunkOverlap</div>
-        </div>
-        <div class="col-md-3">
-            <div class="text-muted">Top-K</div>
-            <div class="fw-semibold">@Model.TopK</div>
-        </div>
-        <div class="col-md-6">
-            <div class="text-muted">Last updated time</div>
-            <div class="fw-semibold">@Model.UpdatedAt.ToLocalTime().ToString("g")</div>
-        </div>
-        <div class="col-md-6">
-            <div class="text-muted">Updated by Admin</div>
-            <div class="fw-semibold">@(string.IsNullOrWhiteSpace(Model.UpdatedByAdminName) ? "Admin" : Model.UpdatedByAdminName)</div>
-        </div>
-    </div>
-</section>
-
-<section class="card-panel col-lg-8">
-    <h2 class="section-title">Cập nhật cấu hình</h2>
-    <form asp-action="Index" method="post">
-        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
-
-        <div class="mb-3">
-            <label asp-for="ChunkStrategy" class="form-label"></label>
-            <select asp-for="ChunkStrategy" asp-items="Model.StrategyOptions" class="form-select"></select>
-            <span asp-validation-for="ChunkStrategy" class="text-danger"></span>
-        </div>
-
-        <div class="mb-3">
-            <label asp-for="ChunkSize" class="form-label"></label>
-            <input asp-for="ChunkSize" class="form-control" type="number" min="1" />
-            <span asp-validation-for="ChunkSize" class="text-danger"></span>
-        </div>
-
-        <div class="mb-3">
-            <label asp-for="ChunkOverlap" class="form-label"></label>
-            <input asp-for="ChunkOverlap" class="form-control" type="number" min="0" />
-            <span asp-validation-for="ChunkOverlap" class="text-danger"></span>
-        </div>
-
-        <div class="mb-3">
-            <label asp-for="TopK" class="form-label"></label>
-            <input asp-for="TopK" class="form-control" type="number" min="1" max="50" />
-            <span asp-validation-for="TopK" class="text-danger"></span>
-        </div>
-
-        <button type="submit" class="btn btn-primary">Save</button>
-    </form>
-</section>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />

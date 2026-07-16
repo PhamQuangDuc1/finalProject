@@ -5,123 +5,146 @@
     ViewData["Title"] = Model.Title;
 }
 
-<div class="dashboard-header">
-    <div>
-        <h1>@Model.Title</h1>
-        <p>Không gian tổng quan cho vai trò hiện tại trong StudyMate AI.</p>
-    </div>
-</div>
-
-<section class="metric-grid">
-    @foreach (var metric in Model.Metrics)
-    {
-        <article class="metric-card">
-            <span>@metric.Label</span>
-            <strong>@metric.Value</strong>
-        </article>
-    }
-</section>
-
-@if (Model.Role == UserRole.Admin)
-{
-    <section class="dashboard-grid">
-        <article class="card-panel">
-            <h2 class="section-title">Documents by Teacher</h2>
-            @if (Model.DocumentsByTeacher.Count == 0)
-            {
-                <p class="text-muted mb-0">Chưa có dữ liệu tài liệu theo giảng viên.</p>
-            }
-            else
-            {
-                <div class="list-stack">
-                    @foreach (var item in Model.DocumentsByTeacher)
-                    {
-                        <div class="list-row">
-                            <span>@item.TeacherName</span>
-                            <strong>@item.DocumentCount</strong>
-                        </div>
-                    }
-                </div>
-            }
-        </article>
-
-        <article class="card-panel">
-            <h2 class="section-title">Recent Uploads</h2>
-            <partial name="_RecentUploads" model="Model.RecentUploads" />
-        </article>
-    </section>
-}
-
-@if (Model.Role == UserRole.Teacher)
-{
-    <section class="card-panel">
-        <h2 class="section-title">Recent Uploads</h2>
-        <partial name="_RecentUploads" model="Model.RecentUploads" />
-    </section>
-}
-
-@if (Model.Role == UserRole.Student)
-{
-    <section class="card-panel mb-4">
-        <div class="d-flex align-items-center justify-content-between gap-3 mb-3">
-            <div>
-                <h2 class="section-title mb-1">Chat AI voi tai lieu</h2>
-                <p class="text-muted mb-0">Chon tai lieu da index va hoi AI dua tren noi dung chunk.</p>
-            </div>
+<div class="dashboard-page">
+    <div class="dashboard-hero">
+        <div>
+            <p class="dashboard-kicker">StudyMate AI</p>
+            <h1>@Model.Title</h1>
+            <p>Không gian tổng quan cho vai trò hiện tại, giúp bạn theo dõi tài liệu, người dùng và hoạt động AI nhanh hơn.</p>
         </div>
+        <div class="dashboard-hero-badge" aria-label="Vai trò hiện tại">
+            <span>Vai trò</span>
+            <strong>@Model.Role</strong>
+        </div>
+    </div>
 
-        @if (Model.RecentUploads.Count == 0)
+    <section class="metric-grid dashboard-metrics" aria-label="Chỉ số tổng quan">
+        @foreach (var metric in Model.Metrics)
         {
-            <p class="text-muted mb-0">Chua co tai lieu san sang de hoi AI.</p>
-        }
-        else
-        {
-            <form asp-controller="StudentDocuments" asp-action="AskAi" method="post" class="d-grid gap-3">
-                @Html.AntiForgeryToken()
-                <div class="row g-3">
-                    <div class="col-md-5">
-                        <label for="aiDocumentId" class="form-label">Tai lieu</label>
-                        <select id="aiDocumentId" name="id" class="form-select" required>
-                            @foreach (var upload in Model.RecentUploads)
-                            {
-                                <option value="@upload.Id">@upload.Title - @upload.SubjectName</option>
-                            }
-                        </select>
-                    </div>
-                    <div class="col-md-7">
-                        <label for="aiQuestion" class="form-label">Cau hoi</label>
-                        <textarea id="aiQuestion" name="question" class="form-control" rows="3" maxlength="1000" required></textarea>
-                    </div>
-                </div>
-                <div>
-                    <button type="submit" class="btn btn-primary">Hoi AI</button>
-                    <a class="btn btn-outline-secondary" asp-controller="StudentDocuments" asp-action="Index">Mo danh sach tai lieu</a>
-                </div>
-            </form>
+            <article class="metric-card dashboard-metric-card">
+                <span>@metric.Label</span>
+                <strong>@metric.Value</strong>
+            </article>
         }
     </section>
 
-    <section class="dashboard-grid">
-        <article class="card-panel">
-            <h2 class="section-title">Tài liệu mới</h2>
-            <partial name="_RecentUploads" model="Model.RecentUploads" />
-        </article>
+    @if (Model.Role == UserRole.Admin)
+    {
+        <section class="dashboard-grid dashboard-panels">
+            <article class="card-panel dashboard-panel">
+                <div class="panel-heading">
+                    <p class="dashboard-kicker">Giảng viên</p>
+                    <h2 class="section-title">Tài liệu theo giảng viên</h2>
+                </div>
+                @if (Model.DocumentsByTeacher.Count == 0)
+                {
+                    <p class="text-muted mb-0">Chưa có dữ liệu tài liệu theo giảng viên.</p>
+                }
+                else
+                {
+                    <div class="list-stack">
+                        @foreach (var item in Model.DocumentsByTeacher)
+                        {
+                            <div class="list-row">
+                                <span>@item.TeacherName</span>
+                                <strong>@item.DocumentCount</strong>
+                            </div>
+                        }
+                    </div>
+                }
+            </article>
 
-        <article class="card-panel">
-            <h2 class="section-title">Subjects</h2>
-            @if (Model.Subjects.Count == 0)
+            <article class="card-panel dashboard-panel">
+                <div class="panel-heading">
+                    <p class="dashboard-kicker">Hoạt động</p>
+                    <h2 class="section-title">Tải lên gần đây</h2>
+                </div>
+                <partial name="_RecentUploads" model="Model.RecentUploads" />
+            </article>
+        </section>
+    }
+
+    @if (Model.Role == UserRole.Teacher)
+    {
+        <section class="card-panel dashboard-panel">
+            <div class="panel-heading">
+                <p class="dashboard-kicker">Hoạt động</p>
+                <h2 class="section-title">Tải lên gần đây</h2>
+            </div>
+            <partial name="_RecentUploads" model="Model.RecentUploads" />
+        </section>
+    }
+
+    @if (Model.Role == UserRole.Student)
+    {
+        <section class="card-panel dashboard-panel mb-4">
+            <div class="panel-heading panel-heading-inline">
+                <div>
+                    <p class="dashboard-kicker">Trợ lý AI</p>
+                    <h2 class="section-title">Chat AI với tài liệu</h2>
+                    <p class="text-muted mb-0">Chọn tài liệu đã index và hỏi AI dựa trên nội dung chunk.</p>
+                </div>
+            </div>
+
+            @if (Model.RecentUploads.Count == 0)
             {
-                <p class="text-muted mb-0">Chưa có môn học khả dụng.</p>
+                <p class="text-muted mb-0">Chưa có tài liệu sẵn sàng để hỏi AI.</p>
             }
             else
             {
-                <div class="tag-list">
-                    @foreach (var subject in Model.Subjects)
-                    {
-                        <span>@subject</span>
-                    }
-                </div>
+                <form asp-controller="StudentDocuments" asp-action="AskAi" method="post" class="d-grid gap-3">
+                    @Html.AntiForgeryToken()
+                    <div class="row g-3">
+                        <div class="col-md-5">
+                            <label for="aiDocumentId" class="form-label">Tài liệu</label>
+                            <select id="aiDocumentId" name="id" class="form-select" required>
+                                @foreach (var upload in Model.RecentUploads)
+                                {
+                                    <option value="@upload.Id">@upload.Title - @upload.SubjectName</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-7">
+                            <label for="aiQuestion" class="form-label">Câu hỏi</label>
+                            <textarea id="aiQuestion" name="question" class="form-control" rows="3" maxlength="1000" required></textarea>
+                        </div>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2">
+                        <button type="submit" class="btn btn-primary">Hỏi AI</button>
+                        <a class="btn btn-outline-primary" asp-controller="StudentDocuments" asp-action="Index">Mở danh sách tài liệu</a>
+                    </div>
+                </form>
             }
-        </article>
-    </section>
-}
+        </section>
+
+        <section class="dashboard-grid dashboard-panels">
+            <article class="card-panel dashboard-panel">
+                <div class="panel-heading">
+                    <p class="dashboard-kicker">Tài liệu</p>
+                    <h2 class="section-title">Tài liệu mới</h2>
+                </div>
+                <partial name="_RecentUploads" model="Model.RecentUploads" />
+            </article>
+
+            <article class="card-panel dashboard-panel">
+                <div class="panel-heading">
+                    <p class="dashboard-kicker">Môn học</p>
+                    <h2 class="section-title">Môn học khả dụng</h2>
+                </div>
+                @if (Model.Subjects.Count == 0)
+                {
+                    <p class="text-muted mb-0">Chưa có môn học khả dụng.</p>
+                }
+                else
+                {
+                    <div class="tag-list">
+                        @foreach (var subject in Model.Subjects)
+                        {
+                            <span>@subject</span>
+                        }
+                    </div>
+                }
+            </article>
+        </section>
+    }
+</div>

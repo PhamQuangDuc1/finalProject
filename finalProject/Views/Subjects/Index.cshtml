@@ -4,69 +4,81 @@
     ViewData["Title"] = "Môn học";
 }
 
-<div class="d-flex align-items-center justify-content-between mb-3">
-    <h1 class="h3 mb-0">Môn học</h1>
-    <a class="btn btn-primary" asp-action="Create">Tạo môn học</a>
-</div>
+<div class="admin-page">
+    <div class="admin-hero">
+        <div>
+            <p class="dashboard-kicker">Chương trình học</p>
+            <h1>Môn học</h1>
+            <p>Theo dõi môn học, bộ môn phụ trách, giảng viên được phân công và trạng thái hoạt động.</p>
+        </div>
+        <a class="btn btn-primary admin-primary-action" asp-action="Create">Tạo môn học</a>
+    </div>
 
-<section class="card-panel">
-    <div class="table-responsive">
-        <table class="table table-striped align-middle mb-0">
-            <thead>
-                <tr>
-                    <th>Mã môn</th>
-                    <th>Tên môn học</th>
-                    <th>Bộ môn</th>
-                    <th>Giảng viên được phân công</th>
-                    <th>Trạng thái</th>
-                    <th>Thao tác</th>
-                </tr>
-            </thead>
-            <tbody>
-            @if (Model.Count == 0)
-            {
-                <tr>
-                    <td colspan="6" class="text-muted">Chưa có môn học nào được tạo.</td>
-                </tr>
-            }
-            else
-            {
-                @foreach (var subject in Model)
+    <section class="card-panel admin-panel">
+        <div class="panel-heading">
+            <p class="dashboard-kicker">Danh sách</p>
+            <h2 class="section-title">Môn học trong hệ thống</h2>
+        </div>
+        <div class="table-responsive">
+            <table class="table admin-table align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Mã môn</th>
+                        <th>Tên môn học</th>
+                        <th>Bộ môn</th>
+                        <th>Giảng viên được phân công</th>
+                        <th>Trạng thái</th>
+                        <th>Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @if (Model.Count == 0)
                 {
                     <tr>
-                        <td>@subject.Code</td>
-                        <td>@subject.Name</td>
-                        <td>@subject.DepartmentName</td>
-                        <td>
-                            @if (subject.AssignedTeacherNames.Count == 0)
-                            {
-                                <span class="text-muted">Chưa phân công</span>
-                            }
-                            else
-                            {
-                                @string.Join(", ", subject.AssignedTeacherNames)
-                            }
-                        </td>
-                        <td>
-                            <span class="badge @(subject.IsActive ? "bg-success" : "bg-secondary")">
-                                @(subject.IsActive ? "Đang hoạt động" : "Đã tạm ngưng")
-                            </span>
-                        </td>
-                        <td>
-                            <div class="btn-group btn-group-sm" role="group">
-                                <a class="btn btn-outline-primary" asp-action="Details" asp-route-id="@subject.Id">Chi tiết</a>
-                                <a class="btn btn-outline-primary" asp-action="Edit" asp-route-id="@subject.Id">Sửa</a>
-                            </div>
-                            <form asp-action="@(subject.IsActive ? "Deactivate" : "Activate")" asp-route-id="@subject.Id" method="post" class="d-inline">
-                                <button type="submit" class="btn btn-sm @(subject.IsActive ? "btn-outline-warning" : "btn-outline-success")">
-                                    @(subject.IsActive ? "Tạm ngưng" : "Kích hoạt")
-                                </button>
-                            </form>
-                        </td>
+                        <td colspan="6" class="text-muted">Chưa có môn học nào được tạo.</td>
                     </tr>
                 }
-            }
-            </tbody>
-        </table>
-    </div>
-</section>
+                else
+                {
+                    @foreach (var subject in Model)
+                    {
+                        <tr>
+                            <td><span class="admin-code">@subject.Code</span></td>
+                            <td><strong>@subject.Name</strong></td>
+                            <td>@subject.DepartmentName</td>
+                            <td>
+                                @if (subject.AssignedTeacherNames.Count == 0)
+                                {
+                                    <span class="text-muted">Chưa phân công</span>
+                                }
+                                else
+                                {
+                                    @string.Join(", ", subject.AssignedTeacherNames)
+                                }
+                            </td>
+                            <td>
+                                <span class="badge rounded-pill @(subject.IsActive ? "text-bg-success" : "text-bg-secondary")">
+                                    @(subject.IsActive ? "Đang hoạt động" : "Đã tạm ngưng")
+                                </span>
+                            </td>
+                            <td>
+                                <div class="admin-actions">
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <a class="btn btn-outline-primary" asp-action="Details" asp-route-id="@subject.Id">Chi tiết</a>
+                                        <a class="btn btn-outline-primary" asp-action="Edit" asp-route-id="@subject.Id">Sửa</a>
+                                    </div>
+                                    <form asp-action="@(subject.IsActive ? "Deactivate" : "Activate")" asp-route-id="@subject.Id" method="post" class="d-inline">
+                                        <button type="submit" class="btn btn-sm @(subject.IsActive ? "btn-outline-warning" : "btn-outline-success")">
+                                            @(subject.IsActive ? "Tạm ngưng" : "Kích hoạt")
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>

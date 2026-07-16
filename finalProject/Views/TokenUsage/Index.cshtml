@@ -6,213 +6,236 @@
     var maxDailyCost = Math.Max(0.000001m, Model.Dashboard.DailySummaries.Max(summary => summary.EstimatedCost));
 }
 
-<div class="d-flex align-items-center justify-content-between mb-3">
-    <div>
-        <h1 class="h3 mb-1">Thống kê AI Usage và Estimated Cost</h1>
-        <p class="text-muted mb-0">Dữ liệu lấy từ AiUsageLog. Chi phí hiển thị là Estimated Cost.</p>
+<div class="admin-page">
+    <div class="admin-hero">
+        <div>
+            <p class="dashboard-kicker">Chi phí AI</p>
+            <h1>Thống kê AI & chi phí ước tính</h1>
+            <p>Theo dõi token, số lượt yêu cầu và chi phí ước tính từ AiUsageLog theo tháng, model và loại tác vụ.</p>
+        </div>
+        <div class="admin-hero-stat">
+            <span>Chi phí tháng này</span>
+            <strong>$@Model.Dashboard.EstimatedCostThisMonth.ToString("0.000000")</strong>
+        </div>
     </div>
+
+    <section class="card-panel admin-panel">
+        <div class="panel-heading">
+            <p class="dashboard-kicker">Bộ lọc</p>
+            <h2 class="section-title">Điều kiện thống kê</h2>
+        </div>
+        <form asp-action="Index" method="get" class="row g-3 align-items-end admin-form">
+            <div class="col-md-3">
+                <label asp-for="Month" class="form-label">Tháng</label>
+                <select asp-for="Month" asp-items="Model.MonthOptions" class="form-select"></select>
+            </div>
+            <div class="col-md-4">
+                <label asp-for="ModelName" class="form-label">Model</label>
+                <select asp-for="ModelName" asp-items="Model.ModelOptions" class="form-select">
+                    <option value="">Tất cả model</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label asp-for="OperationType" class="form-label">Loại tác vụ</label>
+                <select asp-for="OperationType" asp-items="Model.OperationOptions" class="form-select">
+                    <option value="">Tất cả tác vụ</option>
+                </select>
+            </div>
+            <div class="col-md-2 d-flex gap-2">
+                <button type="submit" class="btn btn-primary admin-primary-action flex-fill">Lọc</button>
+                <a class="btn btn-outline-secondary" asp-action="Index">Xóa</a>
+            </div>
+        </form>
+    </section>
+
+    <section class="metric-grid dashboard-metrics">
+        <div class="metric-card dashboard-metric-card">
+            <span>Prompt tokens tháng này</span>
+            <strong>@Model.Dashboard.TotalPromptTokensThisMonth.ToString("N0")</strong>
+        </div>
+        <div class="metric-card dashboard-metric-card">
+            <span>Completion tokens tháng này</span>
+            <strong>@Model.Dashboard.TotalCompletionTokensThisMonth.ToString("N0")</strong>
+        </div>
+        <div class="metric-card dashboard-metric-card">
+            <span>Tổng tokens tháng này</span>
+            <strong>@Model.Dashboard.TotalTokensThisMonth.ToString("N0")</strong>
+        </div>
+        <div class="metric-card dashboard-metric-card">
+            <span>Chi phí ước tính tháng này</span>
+            <strong>$@Model.Dashboard.EstimatedCostThisMonth.ToString("0.000000")</strong>
+        </div>
+        <div class="metric-card dashboard-metric-card">
+            <span>Yêu cầu tháng này</span>
+            <strong>@Model.Dashboard.RequestsThisMonth.ToString("N0")</strong>
+        </div>
+        <div class="metric-card dashboard-metric-card">
+            <span>Tokens trung bình mỗi yêu cầu</span>
+            <strong>@Model.Dashboard.AverageTokensPerRequest.ToString("N2")</strong>
+        </div>
+    </section>
+
+    <section class="card-panel admin-panel">
+        <div class="panel-heading">
+            <p class="dashboard-kicker">Token</p>
+            <h2 class="section-title">Token sử dụng theo ngày trong tháng</h2>
+        </div>
+        <div class="table-responsive">
+            <table class="table admin-table align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Ngày</th>
+                        <th>Prompt</th>
+                        <th>Completion</th>
+                        <th>Tổng tokens</th>
+                        <th>Yêu cầu</th>
+                        <th style="width: 28%">Mức sử dụng</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @foreach (var summary in Model.Dashboard.DailySummaries)
+                {
+                    var width = summary.TotalTokens * 100m / maxDailyTokens;
+                    <tr>
+                        <td>@summary.Date.ToString("dd/MM/yyyy")</td>
+                        <td>@summary.PromptTokens.ToString("N0")</td>
+                        <td>@summary.CompletionTokens.ToString("N0")</td>
+                        <td>@summary.TotalTokens.ToString("N0")</td>
+                        <td>@summary.Requests.ToString("N0")</td>
+                        <td>
+                            <div class="progress admin-progress">
+                                <div class="progress-bar" style="width: @width.ToString("0.##")%"></div>
+                            </div>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="card-panel admin-panel">
+        <div class="panel-heading">
+            <p class="dashboard-kicker">Chi phí</p>
+            <h2 class="section-title">Chi phí theo ngày</h2>
+        </div>
+        <div class="table-responsive">
+            <table class="table admin-table align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Ngày</th>
+                        <th>Chi phí ước tính</th>
+                        <th style="width: 35%">Xu hướng chi phí</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @foreach (var summary in Model.Dashboard.DailySummaries)
+                {
+                    var width = summary.EstimatedCost * 100m / maxDailyCost;
+                    <tr>
+                        <td>@summary.Date.ToString("dd/MM/yyyy")</td>
+                        <td>$@summary.EstimatedCost.ToString("0.000000")</td>
+                        <td>
+                            <div class="progress admin-progress">
+                                <div class="progress-bar bg-success" style="width: @width.ToString("0.##")%"></div>
+                            </div>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="dashboard-grid dashboard-panels">
+        <div class="card-panel admin-panel">
+            <div class="panel-heading">
+                <p class="dashboard-kicker">Model</p>
+                <h2 class="section-title">Token theo model</h2>
+            </div>
+            <div class="table-responsive">
+                <table class="table admin-table align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Model</th>
+                            <th>Tổng tokens</th>
+                            <th>Yêu cầu</th>
+                            <th>Chi phí ước tính</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    @if (Model.Dashboard.ModelSummaries.Count == 0)
+                    {
+                        <tr>
+                            <td colspan="4" class="text-muted">Chưa có dữ liệu theo model.</td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var summary in Model.Dashboard.ModelSummaries)
+                        {
+                            <tr>
+                                <td>@summary.ModelName</td>
+                                <td>@summary.TotalTokens.ToString("N0")</td>
+                                <td>@summary.Requests.ToString("N0")</td>
+                                <td>$@summary.EstimatedCost.ToString("0.000000")</td>
+                            </tr>
+                        }
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card-panel admin-panel">
+            <div class="panel-heading">
+                <p class="dashboard-kicker">Tác vụ</p>
+                <h2 class="section-title">Token theo tác vụ</h2>
+            </div>
+            <div class="table-responsive">
+                <table class="table admin-table align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Tác vụ</th>
+                            <th>Tổng tokens</th>
+                            <th>Yêu cầu</th>
+                            <th>Chi phí ước tính</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    @if (Model.Dashboard.OperationSummaries.Count == 0)
+                    {
+                        <tr>
+                            <td colspan="4" class="text-muted">Chưa có dữ liệu theo tác vụ.</td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var summary in Model.Dashboard.OperationSummaries)
+                        {
+                            <tr>
+                                <td>@GetOperationLabel(summary.OperationType)</td>
+                                <td>@summary.TotalTokens.ToString("N0")</td>
+                                <td>@summary.Requests.ToString("N0")</td>
+                                <td>$@summary.EstimatedCost.ToString("0.000000")</td>
+                            </tr>
+                        }
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
 </div>
-
-<section class="card-panel mb-4">
-    <form asp-action="Index" method="get" class="row g-3 align-items-end">
-        <div class="col-md-3">
-            <label asp-for="Month" class="form-label">Month</label>
-            <select asp-for="Month" asp-items="Model.MonthOptions" class="form-select"></select>
-        </div>
-        <div class="col-md-4">
-            <label asp-for="ModelName" class="form-label">Model</label>
-            <select asp-for="ModelName" asp-items="Model.ModelOptions" class="form-select">
-                <option value="">All models</option>
-            </select>
-        </div>
-        <div class="col-md-3">
-            <label asp-for="OperationType" class="form-label">Operation Type</label>
-            <select asp-for="OperationType" asp-items="Model.OperationOptions" class="form-select">
-                <option value="">All operations</option>
-            </select>
-        </div>
-        <div class="col-md-2 d-flex gap-2">
-            <button type="submit" class="btn btn-primary flex-fill">Lọc</button>
-            <a class="btn btn-outline-secondary" asp-action="Index">Xóa</a>
-        </div>
-    </form>
-</section>
-
-<section class="metric-grid">
-    <div class="metric-card">
-        <span>Total Prompt Tokens This Month</span>
-        <strong>@Model.Dashboard.TotalPromptTokensThisMonth.ToString("N0")</strong>
-    </div>
-    <div class="metric-card">
-        <span>Total Completion Tokens This Month</span>
-        <strong>@Model.Dashboard.TotalCompletionTokensThisMonth.ToString("N0")</strong>
-    </div>
-    <div class="metric-card">
-        <span>Total Tokens This Month</span>
-        <strong>@Model.Dashboard.TotalTokensThisMonth.ToString("N0")</strong>
-    </div>
-    <div class="metric-card">
-        <span>Estimated Cost This Month</span>
-        <strong>$@Model.Dashboard.EstimatedCostThisMonth.ToString("0.000000")</strong>
-    </div>
-    <div class="metric-card">
-        <span>Requests This Month</span>
-        <strong>@Model.Dashboard.RequestsThisMonth.ToString("N0")</strong>
-    </div>
-    <div class="metric-card">
-        <span>Average Tokens Per Request</span>
-        <strong>@Model.Dashboard.AverageTokensPerRequest.ToString("N2")</strong>
-    </div>
-</section>
-
-<section class="card-panel mb-4">
-    <h2 class="section-title">Token usage theo ngày trong tháng</h2>
-    <div class="table-responsive">
-        <table class="table table-striped align-middle mb-0">
-            <thead>
-                <tr>
-                    <th>Ngày</th>
-                    <th>Prompt</th>
-                    <th>Completion</th>
-                    <th>Total Tokens</th>
-                    <th>Requests</th>
-                    <th style="width: 28%">Usage</th>
-                </tr>
-            </thead>
-            <tbody>
-            @foreach (var summary in Model.Dashboard.DailySummaries)
-            {
-                var width = summary.TotalTokens * 100m / maxDailyTokens;
-                <tr>
-                    <td>@summary.Date.ToString("dd/MM/yyyy")</td>
-                    <td>@summary.PromptTokens.ToString("N0")</td>
-                    <td>@summary.CompletionTokens.ToString("N0")</td>
-                    <td>@summary.TotalTokens.ToString("N0")</td>
-                    <td>@summary.Requests.ToString("N0")</td>
-                    <td>
-                        <div class="progress" style="height: 8px;">
-                            <div class="progress-bar" style="width: @width.ToString("0.##")%"></div>
-                        </div>
-                    </td>
-                </tr>
-            }
-            </tbody>
-        </table>
-    </div>
-</section>
-
-<section class="card-panel mb-4">
-    <h2 class="section-title">Chi phí theo ngày</h2>
-    <div class="table-responsive">
-        <table class="table table-striped align-middle mb-0">
-            <thead>
-                <tr>
-                    <th>Ngày</th>
-                    <th>Estimated Cost</th>
-                    <th style="width: 35%">Cost Trend</th>
-                </tr>
-            </thead>
-            <tbody>
-            @foreach (var summary in Model.Dashboard.DailySummaries)
-            {
-                var width = summary.EstimatedCost * 100m / maxDailyCost;
-                <tr>
-                    <td>@summary.Date.ToString("dd/MM/yyyy")</td>
-                    <td>$@summary.EstimatedCost.ToString("0.000000")</td>
-                    <td>
-                        <div class="progress" style="height: 8px;">
-                            <div class="progress-bar bg-success" style="width: @width.ToString("0.##")%"></div>
-                        </div>
-                    </td>
-                </tr>
-            }
-            </tbody>
-        </table>
-    </div>
-</section>
-
-<section class="dashboard-grid mb-4">
-    <div class="card-panel">
-        <h2 class="section-title">Token usage theo model</h2>
-        <div class="table-responsive">
-            <table class="table table-striped align-middle mb-0">
-                <thead>
-                    <tr>
-                        <th>Model</th>
-                        <th>Total Tokens</th>
-                        <th>Requests</th>
-                        <th>Estimated Cost</th>
-                    </tr>
-                </thead>
-                <tbody>
-                @if (Model.Dashboard.ModelSummaries.Count == 0)
-                {
-                    <tr>
-                        <td colspan="4" class="text-muted">Chưa có dữ liệu theo model.</td>
-                    </tr>
-                }
-                else
-                {
-                    @foreach (var summary in Model.Dashboard.ModelSummaries)
-                    {
-                        <tr>
-                            <td>@summary.ModelName</td>
-                            <td>@summary.TotalTokens.ToString("N0")</td>
-                            <td>@summary.Requests.ToString("N0")</td>
-                            <td>$@summary.EstimatedCost.ToString("0.000000")</td>
-                        </tr>
-                    }
-                }
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <div class="card-panel">
-        <h2 class="section-title">Token usage theo operation</h2>
-        <div class="table-responsive">
-            <table class="table table-striped align-middle mb-0">
-                <thead>
-                    <tr>
-                        <th>Operation</th>
-                        <th>Total Tokens</th>
-                        <th>Requests</th>
-                        <th>Estimated Cost</th>
-                    </tr>
-                </thead>
-                <tbody>
-                @if (Model.Dashboard.OperationSummaries.Count == 0)
-                {
-                    <tr>
-                        <td colspan="4" class="text-muted">Chưa có dữ liệu theo operation.</td>
-                    </tr>
-                }
-                else
-                {
-                    @foreach (var summary in Model.Dashboard.OperationSummaries)
-                    {
-                        <tr>
-                            <td>@GetOperationLabel(summary.OperationType)</td>
-                            <td>@summary.TotalTokens.ToString("N0")</td>
-                            <td>@summary.Requests.ToString("N0")</td>
-                            <td>$@summary.EstimatedCost.ToString("0.000000")</td>
-                        </tr>
-                    }
-                }
-                </tbody>
-            </table>
-        </div>
-    </div>
-</section>
 
 @functions {
     private static string GetOperationLabel(DAL.Entities.AiOperationType operationType)
     {
         return operationType switch
         {
-            DAL.Entities.AiOperationType.DocumentEmbedding => "Embedding",
-            DAL.Entities.AiOperationType.ChatCompletion => "Chat Completion",
-            DAL.Entities.AiOperationType.ReIndexDocument => "Document Indexing",
+            DAL.Entities.AiOperationType.DocumentEmbedding => "Embedding tài liệu",
+            DAL.Entities.AiOperationType.ChatCompletion => "Chat AI",
+            DAL.Entities.AiOperationType.ReIndexDocument => "Index lại tài liệu",
             DAL.Entities.AiOperationType.Benchmark => "Benchmark",
             _ => operationType.ToString()
         };

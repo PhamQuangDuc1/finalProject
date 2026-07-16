@@ -1,76 +1,87 @@
 @model IReadOnlyList<BLL.DTOs.DocumentDto>
 
 @{
-    ViewData["Title"] = "T\u00E0i li\u1EC7u h\u1ECDc t\u1EADp";
+    ViewData["Title"] = "Tài liệu học tập";
 }
 
-<div class="d-flex align-items-center justify-content-between mb-3">
-    <div>
-        <h1 class="h3 mb-1">T&agrave;i li&#7879;u h&#7885;c t&#7853;p</h1>
-        <p class="text-muted mb-0">Ch&#7881; hi&#7875;n th&#7883; t&agrave;i li&#7879;u &#273;&atilde; index, m&ocirc;n h&#7885;c &#273;ang ho&#7841;t &#273;&#7897;ng v&agrave; ch&#432;a archive.</p>
+<div class="admin-page">
+    <div class="admin-hero">
+        <div>
+            <p class="dashboard-kicker">Sinh viên</p>
+            <h1>Tài liệu học tập</h1>
+            <p>Danh sách tài liệu đã index, thuộc môn học đang hoạt động và sẵn sàng để xem hoặc tải xuống.</p>
+        </div>
+        <div class="admin-hero-stat">
+            <span>Tài liệu</span>
+            <strong>@Model.Count</strong>
+        </div>
     </div>
-</div>
 
-@if (TempData["StatusMessage"] is string statusMessage)
-{
-    <div class="alert alert-info" role="alert">@statusMessage</div>
-}
+    @if (TempData["StatusMessage"] is string statusMessage)
+    {
+        <div class="alert alert-info" role="alert">@statusMessage</div>
+    }
 
-<section class="card-panel">
-    <div class="table-responsive">
-        <table class="table table-striped align-middle mb-0">
-            <thead>
-                <tr>
-                    <th>Ti&ecirc;u &#273;&#7873;</th>
-                    <th>M&ocirc;n h&#7885;c</th>
-                    <th>B&#7897; m&ocirc;n</th>
-                    <th>Ng&agrave;y upload</th>
-                    <th>C&#7843;nh b&aacute;o</th>
-                    <th>Thao t&aacute;c</th>
-                </tr>
-            </thead>
-            <tbody>
-            @if (Model.Count == 0)
-            {
-                <tr>
-                    <td colspan="6" class="text-muted">Ch&#432;a c&oacute; t&agrave;i li&#7879;u h&#7885;c t&#7853;p kh&#7843; d&#7909;ng.</td>
-                </tr>
-            }
-            else
-            {
-                @foreach (var document in Model)
+    <section class="card-panel admin-panel">
+        <div class="panel-heading">
+            <p class="dashboard-kicker">Danh sách</p>
+            <h2 class="section-title">Tài liệu khả dụng</h2>
+        </div>
+        <div class="table-responsive">
+            <table class="table admin-table align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Tiêu đề</th>
+                        <th>Môn học</th>
+                        <th>Bộ môn</th>
+                        <th>Ngày upload</th>
+                        <th>Cảnh báo</th>
+                        <th>Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @if (Model.Count == 0)
                 {
                     <tr>
-                        <td>@document.Title</td>
-                        <td>@document.SubjectName</td>
-                        <td>@document.DepartmentName</td>
-                        <td>@document.UploadedAtUtc.ToLocalTime().ToString("g")</td>
-                        <td>
-                            @if (document.ScheduledArchiveAtUtc.HasValue)
-                            {
-                                <div class="archive-warning">
-                                    <span class="badge text-bg-warning">S&#7855;p b&#7883; &#7849;n</span>
-                                    <small>@FormatArchiveWarning(document.ScheduledArchiveAtUtc.Value)</small>
-                                </div>
-                            }
-                            else
-                            {
-                                <span class="text-muted">-</span>
-                            }
-                        </td>
-                        <td>
-                            <div class="btn-group btn-group-sm" role="group">
-                                <a class="btn btn-outline-primary" asp-action="Details" asp-route-id="@document.Id">Xem</a>
-                                <a class="btn btn-outline-primary" asp-action="Download" asp-route-id="@document.Id">T&#7843;i xu&#7889;ng</a>
-                            </div>
-                        </td>
+                        <td colspan="6" class="text-muted">Chưa có tài liệu học tập khả dụng.</td>
                     </tr>
                 }
-            }
-            </tbody>
-        </table>
-    </div>
-</section>
+                else
+                {
+                    @foreach (var document in Model)
+                    {
+                        <tr>
+                            <td><strong>@document.Title</strong></td>
+                            <td>@document.SubjectName</td>
+                            <td>@document.DepartmentName</td>
+                            <td>@document.UploadedAtUtc.ToLocalTime().ToString("g")</td>
+                            <td>
+                                @if (document.ScheduledArchiveAtUtc.HasValue)
+                                {
+                                    <div class="archive-warning">
+                                        <span class="badge text-bg-warning">Sắp bị ẩn</span>
+                                        <small>@FormatArchiveWarning(document.ScheduledArchiveAtUtc.Value)</small>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">-</span>
+                                }
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <a class="btn btn-outline-primary" asp-action="Details" asp-route-id="@document.Id">Xem</a>
+                                    <a class="btn btn-outline-primary" asp-action="Download" asp-route-id="@document.Id">Tải xuống</a>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
 
 @functions {
     private static string FormatArchiveWarning(DateTime scheduledArchiveAtUtc)
@@ -80,14 +91,14 @@
 
         if (remaining.TotalDays >= 1)
         {
-            return $"\u1EA8n l\u00FAc {localTime:g} (c\u00F2n {Math.Ceiling(remaining.TotalDays):0} ng\u00E0y)";
+            return $"Ẩn lúc {localTime:g} (còn {Math.Ceiling(remaining.TotalDays):0} ngày)";
         }
 
         if (remaining.TotalHours >= 1)
         {
-            return $"\u1EA8n l\u00FAc {localTime:g} (c\u00F2n {Math.Ceiling(remaining.TotalHours):0} gi\u1EDD)";
+            return $"Ẩn lúc {localTime:g} (còn {Math.Ceiling(remaining.TotalHours):0} giờ)";
         }
 
-        return $"\u1EA8n l\u00FAc {localTime:g}";
+        return $"Ẩn lúc {localTime:g}";
     }
 }

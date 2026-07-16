@@ -1,16 +1,125 @@
-﻿@{
+@{
     ViewData["Title"] = "Trang chủ";
+
+    var features = new[]
+    {
+        new { Name = "AI Flashcard", Icon = "flashcard" },
+        new { Name = "Quiz thông minh", Icon = "quiz" },
+        new { Name = "Tóm tắt tài liệu", Icon = "summary" },
+        new { Name = "Lộ trình cá nhân hóa", Icon = "path" },
+        new { Name = "Trợ lý học tập AI", Icon = "assistant" },
+        new { Name = "Ghi chú thông minh", Icon = "notes" },
+        new { Name = "Ôn tập ngắt quãng", Icon = "repeat" },
+        new { Name = "Phân tích tiến độ", Icon = "analytics" }
+    };
 }
 
-<div class="text-center">
-    <h1 class="display-4">StudyMate AI</h1>
-    <p>Nền tảng quản lý tài liệu môn học cho trợ lý học tập tiếng Việt.</p>
-    @if (User.Identity?.IsAuthenticated == true)
-    {
-        <a class="btn btn-primary mt-3" asp-controller="Dashboard" asp-action="Index">Vào bảng điều khiển</a>
-    }
-    else
-    {
-        <a class="btn btn-primary mt-3" asp-controller="Account" asp-action="Login">Đăng nhập</a>
-    }
-</div>
+<section class="home-landing" aria-label="StudyMate AI">
+    <div class="studymate-hero">
+        <div class="studymate-hero-media" aria-hidden="true">
+            <video autoplay loop muted playsinline class="studymate-hero-video">
+                @* TODO: Thay src rỗng bằng video nền chính thức của StudyMate AI khi có asset trong dự án. *@
+                <source src="" type="video/mp4" />
+            </video>
+        </div>
+        <div class="studymate-hero-overlay" aria-hidden="true"></div>
+
+        <div class="studymate-hero-content">
+            <p class="studymate-kicker">StudyMate AI</p>
+            <h1>Nền tảng học tập thông minh, đồng hành cùng AI</h1>
+            <p class="studymate-hero-copy">
+                Học hiệu quả hơn với flashcard AI, quiz thông minh và lộ trình học cá nhân hóa
+                được thiết kế cho từng mục tiêu của bạn.
+            </p>
+            @if (User.Identity?.IsAuthenticated == true)
+            {
+                <a class="studymate-cta" asp-controller="Dashboard" asp-action="Index">
+                    Vào bảng điều khiển
+                    <svg viewBox="0 0 16 16" focusable="false" aria-hidden="true">
+                        <path fill="currentColor" d="M6.22 3.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 1 1-1.06-1.06L9.94 8 6.22 4.28a.75.75 0 0 1 0-1.06Z" />
+                    </svg>
+                </a>
+            }
+            else
+            {
+                <a class="studymate-cta" asp-controller="Account" asp-action="Login">
+                    Bắt đầu học ngay
+                    <svg viewBox="0 0 16 16" focusable="false" aria-hidden="true">
+                        <path fill="currentColor" d="M6.22 3.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 1 1-1.06-1.06L9.94 8 6.22 4.28a.75.75 0 0 1 0-1.06Z" />
+                    </svg>
+                </a>
+            }
+        </div>
+
+        <nav class="studymate-floating-nav" aria-label="Điều hướng nổi">
+            <a class="studymate-logo-pill" asp-controller="Home" asp-action="Index" aria-label="StudyMate AI">✦</a>
+            <a class="studymate-nav-link" href="#studymate-features">Tính năng</a>
+            <a class="studymate-nav-link" asp-controller="StudentDocuments" asp-action="Index">Tài liệu</a>
+            <a class="studymate-contact-pill" href="mailto:hello@studymate.ai">
+                Liên hệ ngay
+                <svg viewBox="0 0 16 16" focusable="false" aria-hidden="true">
+                    <path fill="currentColor" d="M6.22 3.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 1 1-1.06-1.06L9.94 8 6.22 4.28a.75.75 0 0 1 0-1.06Z" />
+                </svg>
+            </a>
+        </nav>
+    </div>
+
+    <div id="studymate-features" class="studymate-marquee" aria-label="Tính năng StudyMate AI">
+        <div class="studymate-marquee-track">
+            @for (var repeat = 0; repeat < 2; repeat++)
+            {
+                foreach (var feature in features)
+                {
+                    <div class="studymate-feature-pill">
+                        <span class="studymate-feature-icon" aria-hidden="true">
+                            <svg viewBox="0 0 16 16" focusable="false">
+                                @if (feature.Icon == "flashcard")
+                                {
+                                    <path d="M2.5 3.5A1.5 1.5 0 0 1 4 2h8a1.5 1.5 0 0 1 1.5 1.5v7A1.5 1.5 0 0 1 12 12H4a1.5 1.5 0 0 1-1.5-1.5v-7Z" />
+                                    <path d="M4.25 5h7.5M4.25 7.5h4.5M4.25 14h6.5" />
+                                }
+                                else if (feature.Icon == "quiz")
+                                {
+                                    <path d="M6.2 6.1a2 2 0 1 1 2.9 1.8c-.72.36-1.1.84-1.1 1.6" />
+                                    <path d="M8 12.2h.01M3 3.5A6.7 6.7 0 0 1 8 1.8a6.7 6.7 0 0 1 5 1.7v7.1c0 1.8-2.1 3.1-5 3.8-2.9-.7-5-2-5-3.8V3.5Z" />
+                                }
+                                else if (feature.Icon == "summary")
+                                {
+                                    <path d="M4 2.5h5.5L12 5v8.5H4V2.5Z" />
+                                    <path d="M9.5 2.5V5H12M5.75 7h4.5M5.75 9.25h4.5M5.75 11.5h2.5" />
+                                }
+                                else if (feature.Icon == "path")
+                                {
+                                    <path d="M3 12.5c3.25 0 3.25-9 6.5-9H13" />
+                                    <path d="M10.5 1.5 13 3.5 10.5 5.5M3 12.5h2.5M2 10.5l1 2-1 2" />
+                                }
+                                else if (feature.Icon == "assistant")
+                                {
+                                    <path d="M8 2.25v1.5M4.5 5h7A1.5 1.5 0 0 1 13 6.5v4A1.5 1.5 0 0 1 11.5 12h-7A1.5 1.5 0 0 1 3 10.5v-4A1.5 1.5 0 0 1 4.5 5Z" />
+                                    <path d="M6 8h.01M10 8h.01M6.5 10c.9.55 2.1.55 3 0" />
+                                }
+                                else if (feature.Icon == "notes")
+                                {
+                                    <path d="M4 2.5h7.5V13.5H4V2.5Z" />
+                                    <path d="M6 5h3.5M6 7.5h3.5M6 10h2M11.5 3.5h1.25v8H11.5" />
+                                }
+                                else if (feature.Icon == "repeat")
+                                {
+                                    <path d="M4.25 5.5h6.5A2.25 2.25 0 0 1 13 7.75v.25M6 3.75 4.25 5.5 6 7.25" />
+                                    <path d="M11.75 10.5h-6.5A2.25 2.25 0 0 1 3 8.25v-.25M10 12.25l1.75-1.75L10 8.75" />
+                                }
+                                else
+                                {
+                                    <path d="M3 13h10" />
+                                    <path d="M4.5 10.5V7.75M8 10.5V4.5M11.5 10.5V6" />
+                                    <path d="M4.25 5.75 8 3.25l3.75 1.25" />
+                                }
+                            </svg>
+                        </span>
+                        <span>@feature.Name</span>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+</section>

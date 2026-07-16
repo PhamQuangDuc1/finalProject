@@ -4,90 +4,103 @@
     ViewData["Title"] = "Phân công giảng viên";
 }
 
-<div class="d-flex align-items-center justify-content-between mb-3">
-    <div>
-        <h1 class="h3 mb-1">Phân công giảng viên</h1>
-        <p class="text-muted mb-0">Phân công giảng viên dạy môn học. Vai trò này tách biệt với giảng viên quản lý bộ môn.</p>
+<div class="admin-page">
+    <div class="admin-hero">
+        <div>
+            <p class="dashboard-kicker">Giảng dạy</p>
+            <h1>Phân công giảng viên</h1>
+            <p>Gán giảng viên vào môn học và quản lý danh sách phân công hiện tại.</p>
+        </div>
+        <div class="admin-hero-stat">
+            <span>Phân công</span>
+            <strong>@Model.Assignments.Count</strong>
+        </div>
     </div>
-</div>
 
-@if (TempData["SuccessMessage"] is string successMessage)
-{
-    <div class="alert alert-success" role="alert">
-        @successMessage
-    </div>
-}
+    @if (TempData["SuccessMessage"] is string successMessage)
+    {
+        <div class="alert alert-success" role="alert">
+            @successMessage
+        </div>
+    }
 
-<section class="card-panel mb-4">
-    <h2 class="section-title">Gán giảng viên vào môn học</h2>
-    <form asp-action="Assign" method="post" class="row g-3 align-items-end">
-        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-        <div class="col-md-5">
-            <label asp-for="Form.TeacherId" class="form-label">Giảng viên</label>
-            <select asp-for="Form.TeacherId" asp-items="Model.Form.TeacherOptions" class="form-select">
-                <option value="">Chọn giảng viên</option>
-            </select>
-            <span asp-validation-for="Form.TeacherId" class="text-danger"></span>
+    <section class="card-panel admin-panel">
+        <div class="panel-heading">
+            <p class="dashboard-kicker">Thao tác nhanh</p>
+            <h2 class="section-title">Gán giảng viên vào môn học</h2>
         </div>
-        <div class="col-md-5">
-            <label asp-for="Form.SubjectId" class="form-label">Môn học</label>
-            <select asp-for="Form.SubjectId" asp-items="Model.Form.SubjectOptions" class="form-select">
-                <option value="">Chọn môn học</option>
-            </select>
-            <span asp-validation-for="Form.SubjectId" class="text-danger"></span>
-        </div>
-        <div class="col-md-2">
-            <button type="submit" class="btn btn-primary w-100">Gán</button>
-        </div>
-    </form>
-</section>
+        <form asp-action="Assign" method="post" class="row g-3 align-items-end admin-form">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <div class="col-md-5">
+                <label asp-for="Form.TeacherId" class="form-label">Giảng viên</label>
+                <select asp-for="Form.TeacherId" asp-items="Model.Form.TeacherOptions" class="form-select">
+                    <option value="">Chọn giảng viên</option>
+                </select>
+                <span asp-validation-for="Form.TeacherId" class="text-danger"></span>
+            </div>
+            <div class="col-md-5">
+                <label asp-for="Form.SubjectId" class="form-label">Môn học</label>
+                <select asp-for="Form.SubjectId" asp-items="Model.Form.SubjectOptions" class="form-select">
+                    <option value="">Chọn môn học</option>
+                </select>
+                <span asp-validation-for="Form.SubjectId" class="text-danger"></span>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary admin-primary-action w-100">Gán</button>
+            </div>
+        </form>
+    </section>
 
-<section class="card-panel">
-    <h2 class="section-title">Danh sách phân công</h2>
-    <p class="text-muted">
-        Khi hủy phân công, giảng viên sẽ không thể đăng tải tài liệu mới cho môn học này. Các tài liệu đã đăng trước đó vẫn được giữ lại.
-    </p>
-    <div class="table-responsive">
-        <table class="table table-striped align-middle mb-0">
-            <thead>
-                <tr>
-                    <th>Giảng viên</th>
-                    <th>Môn học</th>
-                    <th>Bộ môn</th>
-                    <th>Ngày phân công</th>
-                    <th>Thao tác</th>
-                </tr>
-            </thead>
-            <tbody>
-            @if (Model.Assignments.Count == 0)
-            {
-                <tr>
-                    <td colspan="5" class="text-muted">Chưa có phân công nào.</td>
-                </tr>
-            }
-            else
-            {
-                @foreach (var assignment in Model.Assignments)
+    <section class="card-panel admin-panel">
+        <div class="panel-heading">
+            <p class="dashboard-kicker">Danh sách</p>
+            <h2 class="section-title">Danh sách phân công</h2>
+            <p class="text-muted mb-0">
+                Khi hủy phân công, giảng viên sẽ không thể đăng tải tài liệu mới cho môn học này. Các tài liệu đã đăng trước đó vẫn được giữ lại.
+            </p>
+        </div>
+        <div class="table-responsive">
+            <table class="table admin-table align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Giảng viên</th>
+                        <th>Môn học</th>
+                        <th>Bộ môn</th>
+                        <th>Ngày phân công</th>
+                        <th>Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @if (Model.Assignments.Count == 0)
                 {
                     <tr>
-                        <td>@assignment.TeacherName</td>
-                        <td>@assignment.SubjectName</td>
-                        <td>@assignment.DepartmentName</td>
-                        <td>@assignment.AssignedAt.ToLocalTime().ToString("g")</td>
-                        <td>
-                            <form asp-action="RemoveAssignment" method="post" class="d-inline">
-                                @Html.AntiForgeryToken()
-                                <input type="hidden" name="id" value="@assignment.Id" />
-                                <button type="submit" class="btn btn-danger btn-sm">Hủy phân công</button>
-                            </form>
-                        </td>
+                        <td colspan="5" class="text-muted">Chưa có phân công nào.</td>
                     </tr>
                 }
-            }
-            </tbody>
-        </table>
-    </div>
-</section>
+                else
+                {
+                    @foreach (var assignment in Model.Assignments)
+                    {
+                        <tr>
+                            <td><strong>@assignment.TeacherName</strong></td>
+                            <td>@assignment.SubjectName</td>
+                            <td>@assignment.DepartmentName</td>
+                            <td>@assignment.AssignedAt.ToLocalTime().ToString("g")</td>
+                            <td>
+                                <form asp-action="RemoveAssignment" method="post" class="d-inline">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="id" value="@assignment.Id" />
+                                    <button type="submit" class="btn btn-danger btn-sm">Hủy phân công</button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                }
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
