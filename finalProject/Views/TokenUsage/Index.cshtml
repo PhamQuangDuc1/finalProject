@@ -5,7 +5,9 @@
     var dailySummaries = Model.Dashboard.DailySummaries;
     var maxDailyTokens = Math.Max(1, dailySummaries.Count == 0 ? 0 : dailySummaries.Max(summary => summary.TotalTokens));
     var maxDailyCost = Math.Max(0.000001m, dailySummaries.Count == 0 ? 0 : dailySummaries.Max(summary => summary.EstimatedCost));
-    var dailyTitle = Model.SortBy switch
+    var dailyTitle = Model.DateScope == BLL.DTOs.AiUsageDateScope.ThisWeek
+        ? "Token và chi phí tuần này"
+        : Model.SortBy switch
     {
         BLL.DTOs.AiUsageDailySortBy.TotalTokens => "Token theo ngày, nhiều nhất trước",
         BLL.DTOs.AiUsageDailySortBy.EstimatedCost => "Chi phí theo ngày, nhiều nhất trước",
@@ -18,7 +20,7 @@
         <div>
             <p class="dashboard-kicker">Chi phí AI</p>
             <h1>Thống kê AI & chi phí ước tính</h1>
-            <p>Theo dõi token, số lượt yêu cầu và chi phí ước tính từ AiUsageLog theo tháng, model và loại tác vụ.</p>
+            <p>Theo dõi token, số lượt yêu cầu và chi phí ước tính từ AiUsageLog theo tháng và model.</p>
         </div>
         <div class="admin-hero-stat">
             <span>Chi phí tháng này</span>
@@ -40,12 +42,6 @@
                 <label asp-for="ModelName" class="form-label">Model</label>
                 <select asp-for="ModelName" asp-items="Model.ModelOptions" class="form-select">
                     <option value="">Tất cả model</option>
-                </select>
-            </div>
-            <div class="col-md-6 col-lg-2">
-                <label asp-for="OperationType" class="form-label">Loại tác vụ</label>
-                <select asp-for="OperationType" asp-items="Model.OperationOptions" class="form-select">
-                    <option value="">Tất cả tác vụ</option>
                 </select>
             </div>
             <div class="col-md-6 col-lg-2">

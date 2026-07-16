@@ -116,11 +116,23 @@ public class AiUsageService : IAiUsageService
                 .Where(log => log.CreatedAt.Date == selectedDay.Value)
                 .ToList();
         }
+        var selectedWeekStart = filter.DateScope == AiUsageDateScope.ThisWeek
+            ? GetWeekStart(filter.Day?.Date ?? DateTime.UtcNow.Date)
+            : (DateTime?)null;
+        if (selectedWeekStart.HasValue)
+        {
+            var weekEndExclusive = selectedWeekStart.Value.AddDays(7);
+            filteredLogs = filteredLogs
+                .Where(log => log.CreatedAt >= selectedWeekStart.Value && log.CreatedAt < weekEndExclusive)
+                .ToList();
+        }
 
         var requests = filteredLogs.Count;
         var totalTokens = filteredLogs.Sum(log => log.TotalTokens);
         var summaryDates = selectedDay.HasValue
             ? new[] { selectedDay.Value }
+            : selectedWeekStart.HasValue
+                ? Enumerable.Range(0, 7).Select(offset => selectedWeekStart.Value.AddDays(offset))
             : Enumerable.Range(1, DateTime.DaysInMonth(year, month))
                 .Select(day => new DateTime(year, month, day, 0, 0, 0, DateTimeKind.Utc));
         var dailySummaries = summaryDates
@@ -208,5 +220,11 @@ public class AiUsageService : IAiUsageService
                 .ThenByDescending(summary => summary.Date),
             _ => dailySummaries.OrderByDescending(summary => summary.Date)
         };
+    }
+
+    private static DateTime GetWeekStart(DateTime date)
+    {
+        var daysSinceMonday = ((int)date.DayOfWeek - (int)DayOfWeek.Monday + 7) % 7;
+        return DateTime.SpecifyKind(date.Date.AddDays(-daysSinceMonday), DateTimeKind.Utc);
     }
 }

@@ -1,7 +1,9 @@
-@model IReadOnlyList<BLL.DTOs.DocumentDto>
+@model StudentDocumentsIndexViewModel
 
 @{
     ViewData["Title"] = "Tài liệu học tập";
+    var upcomingArchiveDocuments = Model.UpcomingArchiveDocuments;
+    var nextArchiveDocument = upcomingArchiveDocuments.FirstOrDefault();
 }
 
 <div class="admin-page">
@@ -13,13 +15,24 @@
         </div>
         <div class="admin-hero-stat">
             <span>Tài liệu</span>
-            <strong>@Model.Count</strong>
+            <strong>@Model.Documents.Count</strong>
         </div>
     </div>
 
     @if (TempData["StatusMessage"] is string statusMessage)
     {
         <div class="alert alert-info" role="alert">@statusMessage</div>
+    }
+
+    @if (nextArchiveDocument is not null)
+    {
+        <div class="alert alert-warning d-flex flex-column gap-1" role="alert">
+            <strong>Có @upcomingArchiveDocuments.Count tài liệu sắp bị ẩn.</strong>
+            <span>
+                Gần nhất: <strong>@nextArchiveDocument.Title</strong>. @FormatArchiveWarning(nextArchiveDocument.ScheduledArchiveAtUtc!.Value). 
+                Hãy xem hoặc tải xuống trước khi tài liệu không còn khả dụng.
+            </span>
+        </div>
     }
 
     <section class="card-panel admin-panel">
@@ -40,7 +53,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                @if (Model.Count == 0)
+                @if (Model.Documents.Count == 0)
                 {
                     <tr>
                         <td colspan="6" class="text-muted">Chưa có tài liệu học tập khả dụng.</td>
@@ -48,7 +61,7 @@
                 }
                 else
                 {
-                    @foreach (var document in Model)
+                    @foreach (var document in Model.Documents)
                     {
                         <tr>
                             <td><strong>@document.Title</strong></td>

@@ -3,6 +3,7 @@ using BLL.DTOs;
 using BLL.Interfaces;
 using DAL.Entities;
 using finalProject.Authorization;
+using finalProject.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -29,7 +30,10 @@ public class StudentDocumentsController : Controller
     {
         var documents = await _documentService.GetDocumentsForStudentAsync(GetCurrentUser(), cancellationToken);
 
-        return View(documents);
+        return View(new StudentDocumentsIndexViewModel
+        {
+            Documents = documents
+        });
     }
 
     public IActionResult ViewDocument(int id)

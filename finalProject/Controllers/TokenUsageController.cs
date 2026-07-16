@@ -24,13 +24,12 @@ public class TokenUsageController : Controller
     public async Task<IActionResult> Index(
         string? month,
         string? modelName,
-        AiOperationType? operationType,
         AiUsageDateScope dateScope = AiUsageDateScope.Month,
         AiUsageDailySortBy sortBy = AiUsageDailySortBy.NewestDate,
         CancellationToken cancellationToken = default)
     {
         var today = DateTime.UtcNow.Date;
-        var selectedMonth = dateScope == AiUsageDateScope.Today
+        var selectedMonth = dateScope is AiUsageDateScope.Today or AiUsageDateScope.ThisWeek
             ? new DateTime(today.Year, today.Month, 1, 0, 0, 0, DateTimeKind.Utc)
             : ParseMonth(month);
         var filter = new AiUsageDashboardFilterDto
@@ -38,9 +37,8 @@ public class TokenUsageController : Controller
             Year = selectedMonth.Year,
             Month = selectedMonth.Month,
             ModelName = modelName,
-            OperationType = operationType,
             DateScope = dateScope,
-            Day = dateScope == AiUsageDateScope.Today ? today : null,
+            Day = dateScope is AiUsageDateScope.Today or AiUsageDateScope.ThisWeek ? today : null,
             SortBy = sortBy
         };
         var dashboard = await _aiUsageService.GetDashboardAsync(GetCurrentUser(), filter, cancellationToken);
@@ -50,12 +48,10 @@ public class TokenUsageController : Controller
             Dashboard = dashboard,
             Month = $"{dashboard.Year:D4}-{dashboard.Month:D2}",
             ModelName = modelName,
-            OperationType = operationType,
             DateScope = dateScope,
             SortBy = sortBy,
             MonthOptions = GetMonthOptions(selectedMonth),
             ModelOptions = GetModelOptions(dashboard.AvailableModels, modelName),
-            OperationOptions = GetOperationOptions(operationType),
             DateScopeOptions = GetDateScopeOptions(dateScope),
             SortOptions = GetSortOptions(sortBy)
         });
@@ -92,18 +88,11 @@ public class TokenUsageController : Controller
             .ToList();
     }
 
-    private static IReadOnlyList<SelectListItem> GetOperationOptions(AiOperationType? selectedOperationType)
-    {
-        return Enum.GetValues<AiOperationType>()
-            .Select(operation => new SelectListItem(GetOperationLabel(operation), operation.ToString(), operation == selectedOperationType))
-            .ToList();
-    }
-
     private static IReadOnlyList<SelectListItem> GetSortOptions(AiUsageDailySortBy selectedSortBy)
     {
         return new[]
         {
-            new SelectListItem("Ngày gần nhất", AiUsageDailySortBy.NewestDate.ToString(), selectedSortBy == AiUsageDailySortBy.NewestDate),
+            new SelectListItem("Theo ngày", AiUsageDailySortBy.NewestDate.ToString(), selectedSortBy == AiUsageDailySortBy.NewestDate),
             new SelectListItem("Token nhiều nhất", AiUsageDailySortBy.TotalTokens.ToString(), selectedSortBy == AiUsageDailySortBy.TotalTokens),
             new SelectListItem("Chi phí nhiều nhất", AiUsageDailySortBy.EstimatedCost.ToString(), selectedSortBy == AiUsageDailySortBy.EstimatedCost)
         };
@@ -114,19 +103,8 @@ public class TokenUsageController : Controller
         return new[]
         {
             new SelectListItem("Cả tháng", AiUsageDateScope.Month.ToString(), selectedDateScope == AiUsageDateScope.Month),
+            new SelectListItem("Tuần này", AiUsageDateScope.ThisWeek.ToString(), selectedDateScope == AiUsageDateScope.ThisWeek),
             new SelectListItem("Hôm nay", AiUsageDateScope.Today.ToString(), selectedDateScope == AiUsageDateScope.Today)
-        };
-    }
-
-    private static string GetOperationLabel(AiOperationType operationType)
-    {
-        return operationType switch
-        {
-            AiOperationType.DocumentEmbedding => "Embedding",
-            AiOperationType.ChatCompletion => "Chat Completion",
-            AiOperationType.ReIndexDocument => "Document Indexing",
-            AiOperationType.Benchmark => "Benchmark",
-            _ => operationType.ToString()
         };
     }
 

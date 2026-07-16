@@ -3,5 +3,6 @@ namespace BLL.DTOs;
 public enum AiUsageDateScope
 {
     Month = 0,
-    Today = 1
+    Today = 1,
+    ThisWeek = 2
 }
