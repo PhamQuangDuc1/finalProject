@@ -1,0 +1,96 @@
+@model IReadOnlyList<BLL.DTOs.AdminUserSubscriptionSummaryDto>
+
+@{
+    ViewData["Title"] = "Quản lý người dùng";
+}
+
+<div class="admin-page">
+    <div class="admin-hero">
+        <div>
+            <p class="dashboard-kicker">Người dùng</p>
+            <h1>Quản lý gói đăng ký</h1>
+            <p>Theo dõi các subscription đang hoạt động và thực hiện nâng cấp, hạ cấp hoặc hủy gói cho người dùng.</p>
+        </div>
+    </div>
+
+    @if (TempData["StatusMessage"] is string statusMessage)
+    {
+        <div class="alert alert-success" role="alert">@statusMessage</div>
+    }
+    @if (TempData["ErrorMessage"] is string errorMessage)
+    {
+        <div class="alert alert-danger" role="alert">@errorMessage</div>
+    }
+
+    <section class="card-panel admin-panel">
+        <div class="panel-heading">
+            <p class="dashboard-kicker">Đang hoạt động</p>
+            <h2 class="section-title">Gói đăng ký hiện tại của người dùng (<span>@Model.Count</span>)</h2>
+        </div>
+        <div class="table-responsive">
+            <table class="table admin-table align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Người dùng</th>
+                        <th>Vai trò</th>
+                        <th>Gói hiện tại</th>
+                        <th>Thời hạn</th>
+                        <th>Token</th>
+                        <th>Hạ cấp dự kiến</th>
+                        <th>Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @if (Model.Count == 0)
+                {
+                    <tr>
+                        <td colspan="7" class="text-muted">Hiện chưa có subscription đang hoạt động nào.</td>
+                    </tr>
+                }
+                else
+                {
+                    @foreach (var sub in Model)
+                    {
+                        <tr>
+                            <td>
+                                <strong>@sub.FullName</strong>
+                                <div class="text-muted small">@@@sub.Username</div>
+                            </td>
+                            <td><span class="badge rounded-pill text-bg-secondary">@sub.Role</span></td>
+                            <td>
+                                <span class="admin-code">@sub.SubscriptionPackageName</span>
+                            </td>
+                            <td>
+                                <div>@sub.EndDate.ToLocalTime().ToString("dd/MM/yyyy")</div>
+                                <div class="text-muted small">còn @sub.DaysRemaining ngày</div>
+                            </td>
+                            <td>
+                                <div>@sub.RemainingTokens / @sub.MaxTokens</div>
+                            </td>
+                            <td>
+                                @if (!string.IsNullOrWhiteSpace(sub.ScheduledDowngradePackageName))
+                                {
+                                    <span class="badge rounded-pill text-bg-warning">@sub.ScheduledDowngradePackageName</span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">—</span>
+                                }
+                            </td>
+                            <td>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <a class="btn btn-sm btn-outline-primary" asp-action="ChangePackage" asp-route-id="@sub.SubscriptionId">Đổi gói</a>
+                                    <form asp-action="Cancel" asp-route-id="@sub.SubscriptionId" method="post" class="d-inline" onsubmit="return confirm('Hủy gói @sub.SubscriptionPackageName của @sub.FullName?');">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">Hủy gói</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>

@@ -13,6 +13,24 @@ internal static class AuthorizationGuard
         }
     }
 
+    public static void RequireAuthenticated(CurrentUserDto currentUser)
+    {
+        if (currentUser.UserId <= 0)
+        {
+            throw new UnauthorizedAccessException("You must sign in to perform this operation.");
+        }
+    }
+
+    public static void RequireBuyer(CurrentUserDto currentUser)
+    {
+        RequireAuthenticated(currentUser);
+
+        if (currentUser.Role is not (UserRole.Teacher or UserRole.Student))
+        {
+            throw new UnauthorizedAccessException("Only Teachers and Students can buy subscription packages.");
+        }
+    }
+
     public static void RequireDocumentOwner(CurrentUserDto currentUser, Document document)
     {
         RequireRole(currentUser, UserRole.Teacher);

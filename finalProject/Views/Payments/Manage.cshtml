@@ -1,0 +1,183 @@
+@model IReadOnlyList<BLL.DTOs.PaymentDto>
+
+@{
+    ViewData["Title"] = "Quản lý thanh toán";
+
+    var totalCount = Model.Count;
+    var completedCount = Model.Count(p => p.Status == DAL.Entities.PaymentStatus.Completed);
+    var pendingCount = Model.Count(p => p.Status == DAL.Entities.PaymentStatus.Pending);
+    var failedCount = Model.Count(p => p.Status == DAL.Entities.PaymentStatus.Failed);
+    var totalRevenue = Model.Where(p => p.Status == DAL.Entities.PaymentStatus.Completed).Sum(p => p.Amount);
+
+    var pendingPayments = Model.Where(p => p.Status == DAL.Entities.PaymentStatus.Pending).ToList();
+    var completedPayments = Model.Where(p => p.Status != DAL.Entities.PaymentStatus.Pending).ToList();
+}
+
+<div class="admin-page">
+    <div class="admin-hero">
+        <div>
+            <p class="dashboard-kicker">Tài chính</p>
+            <h1>Quản lý thanh toán</h1>
+            <p>Theo dõi tất cả giao dịch mua gói đăng ký trong hệ thống. Thanh toán đang chạy qua cổng VNPay — IPN sẽ tự cập nhật trạng thái.</p>
+        </div>
+    </div>
+
+    @if (TempData["StatusMessage"] is string statusMessage)
+    {
+        <div class="alert alert-success" role="alert">@statusMessage</div>
+    }
+    @if (TempData["ErrorMessage"] is string errorMessage)
+    {
+        <div class="alert alert-danger" role="alert">@errorMessage</div>
+    }
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-3 col-sm-6">
+            <div class="card-panel admin-panel h-100">
+                <p class="dashboard-kicker">Tổng giao dịch</p>
+                <p class="display-6 fw-bold mb-0">@totalCount</p>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="card-panel admin-panel h-100">
+                <p class="dashboard-kicker">Thành công</p>
+                <p class="display-6 fw-bold text-success mb-0">@completedCount</p>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="card-panel admin-panel h-100">
+                <p class="dashboard-kicker">Đang chờ</p>
+                <p class="display-6 fw-bold @(pendingCount > 0 ? "text-warning" : "text-muted") mb-0">@pendingCount</p>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="card-panel admin-panel h-100">
+                <p class="dashboard-kicker">Doanh thu</p>
+                <p class="display-6 fw-bold text-primary mb-0">@totalRevenue.ToString("N0") đ</p>
+            </div>
+        </div>
+    </div>
+
+    @if (pendingCount > 0)
+    {
+        <section class="card-panel admin-panel mb-4">
+            <div class="panel-heading">
+                <p class="dashboard-kicker">Cần chú ý</p>
+                <h2 class="section-title">Giao dịch đang chờ VNPay (<span>@pendingCount</span>)</h2>
+            </div>
+            <div class="table-responsive">
+                <table class="table admin-table align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Mã</th>
+                            <th>Người mua</th>
+                            <th>Gói</th>
+                            <th>Số tiền</th>
+                            <th>VNPay Order</th>
+                            <th>Ngày tạo</th>
+                            <th>QR</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var payment in pendingPayments)
+                        {
+                            <tr>
+                                <td><span class="admin-code">#@payment.Id</span></td>
+                                <td>
+                                    <strong>@payment.UserFullName</strong>
+                                    <div class="text-muted small">@payment.UserRole</div>
+                                </td>
+                                <td>@payment.SubscriptionPackageName</td>
+                                <td>@payment.Amount.ToString("N0") đ</td>
+                                <td><span class="admin-code">@payment.GatewayOrderId</span></td>
+                                <td>@payment.CreatedAt.ToLocalTime().ToString("g")</td>
+                                <td>
+                                    @if (!string.IsNullOrWhiteSpace(payment.GatewayQrUrl))
+                                    {
+                                        <a href="@payment.GatewayQrUrl" target="_blank" rel="noopener" class="btn btn-sm btn-outline-secondary">Xem QR</a>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">—</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    }
+
+    <section class="card-panel admin-panel">
+        <div class="panel-heading">
+            <p class="dashboard-kicker">Lịch sử</p>
+            <h2 class="section-title">Tất cả giao dịch</h2>
+        </div>
+        <div class="table-responsive">
+            <table class="table admin-table align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Mã</th>
+                        <th>Người mua</th>
+                        <th>Gói</th>
+                        <th>Số tiền</th>
+                        <th>Cổng</th>
+                        <th>Trạng thái</th>
+                        <th>Ngày tạo</th>
+                        <th>Ngày hoàn tất</th>
+                        <th>Ghi chú</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @if (totalCount == 0)
+                {
+                    <tr>
+                        <td colspan="9" class="text-muted">Chưa có giao dịch thanh toán nào.</td>
+                    </tr>
+                }
+                else
+                {
+                    @foreach (var payment in Model)
+                    {
+                        <tr>
+                            <td><span class="admin-code">#@payment.Id</span></td>
+                            <td>
+                                <strong>@payment.UserFullName</strong>
+                                <div class="text-muted small">@payment.UserRole</div>
+                            </td>
+                            <td>@payment.SubscriptionPackageName</td>
+                            <td>@payment.Amount.ToString("N0") đ</td>
+                            <td>@GetGatewayLabel(payment.Gateway)</td>
+                            <td>
+                                <span class="badge rounded-pill @GetStatusClass(payment.Status)">@payment.StatusLabel</span>
+                            </td>
+                            <td>@payment.CreatedAt.ToLocalTime().ToString("g")</td>
+                            <td>@(payment.CompletedAt?.ToLocalTime().ToString("g") ?? "—")</td>
+                            <td>@(string.IsNullOrWhiteSpace(payment.Note) ? "—" : payment.Note)</td>
+                        </tr>
+                    }
+                }
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+
+@functions {
+    static string GetStatusClass(DAL.Entities.PaymentStatus status) => status switch
+    {
+        DAL.Entities.PaymentStatus.Completed => "text-bg-success",
+        DAL.Entities.PaymentStatus.Pending => "text-bg-warning",
+        DAL.Entities.PaymentStatus.Failed => "text-bg-danger",
+        _ => "text-bg-secondary"
+    };
+
+    static string GetGatewayLabel(DAL.Entities.PaymentGateway gateway) => gateway switch
+    {
+        DAL.Entities.PaymentGateway.None => "Không",
+        DAL.Entities.PaymentGateway.MoMo => "MoMo",
+        DAL.Entities.PaymentGateway.VNPay => "VNPay",
+        _ => gateway.ToString()
+    };
+}

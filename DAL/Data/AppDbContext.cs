@@ -30,6 +30,12 @@ public class AppDbContext : DbContext
 
     public DbSet<AiUsageLog> AiUsageLogs => Set<AiUsageLog>();
 
+    public DbSet<SubscriptionPackage> SubscriptionPackages => Set<SubscriptionPackage>();
+
+    public DbSet<Payment> Payments => Set<Payment>();
+
+    public DbSet<UserSubscription> UserSubscriptions => Set<UserSubscription>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -46,6 +52,9 @@ public class AppDbContext : DbContext
         ConfigureDocumentVersions(modelBuilder);
         ConfigureSystemSettings(modelBuilder);
         ConfigureAiUsageLogs(modelBuilder);
+        ConfigureSubscriptionPackages(modelBuilder);
+        ConfigurePayments(modelBuilder);
+        ConfigureUserSubscriptions(modelBuilder);
         SeedData(modelBuilder, createdAt);
     }
 
@@ -334,6 +343,107 @@ public class AppDbContext : DbContext
         });
     }
 
+    private static void ConfigureSubscriptionPackages(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<SubscriptionPackage>(entity =>
+        {
+            entity.Property(package => package.Name)
+                .HasMaxLength(200)
+                .IsRequired();
+
+            entity.Property(package => package.Description)
+                .HasMaxLength(1000);
+
+            entity.Property(package => package.Price)
+                .HasColumnType("decimal(18,2)");
+
+            entity.Property(package => package.DurationDays)
+                .HasDefaultValue(30);
+
+            entity.Property(package => package.MaxTokens)
+                .HasDefaultValue(0);
+
+            entity.HasIndex(package => package.Name)
+                .IsUnique();
+        });
+    }
+
+    private static void ConfigurePayments(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<Payment>(entity =>
+        {
+            entity.Property(payment => payment.Amount)
+                .HasColumnType("decimal(18,2)");
+
+            entity.Property(payment => payment.Note)
+                .HasMaxLength(500);
+
+            entity.Property(payment => payment.GatewayTransactionId)
+                .HasMaxLength(128);
+
+            entity.Property(payment => payment.GatewayOrderId)
+                .HasMaxLength(64);
+
+            entity.Property(payment => payment.GatewayQrUrl)
+                .HasMaxLength(1000);
+
+            entity.Property(payment => payment.GatewayDeeplink)
+                .HasMaxLength(1000);
+
+            entity.HasIndex(payment => payment.Status);
+            entity.HasIndex(payment => payment.CreatedAt);
+            entity.HasIndex(payment => payment.UserId);
+            entity.HasIndex(payment => payment.GatewayOrderId);
+
+            entity.HasOne(payment => payment.User)
+                .WithMany(user => user.Payments)
+                .HasForeignKey(payment => payment.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(payment => payment.SubscriptionPackage)
+                .WithMany(package => package.Payments)
+                .HasForeignKey(payment => payment.SubscriptionPackageId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(payment => payment.ReviewedByAdmin)
+                .WithMany(user => user.ReviewedPayments)
+                .HasForeignKey(payment => payment.ReviewedByAdminId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.ToTable(table => table.HasCheckConstraint(
+                "CK_Payments_Status",
+                "[Status] IN (0, 1, 2)"));
+        });
+    }
+
+    private static void ConfigureUserSubscriptions(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<UserSubscription>(entity =>
+        {
+            entity.HasIndex(subscription => new { subscription.UserId, subscription.IsActive });
+
+            entity.HasOne(subscription => subscription.User)
+                .WithMany(user => user.UserSubscriptions)
+                .HasForeignKey(subscription => subscription.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(subscription => subscription.SubscriptionPackage)
+                .WithMany()
+                .HasForeignKey(subscription => subscription.SubscriptionPackageId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(subscription => subscription.Payment)
+                .WithMany(payment => payment.UserSubscriptions)
+                .HasForeignKey(subscription => subscription.PaymentId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(subscription => subscription.ScheduledDowngradePackage)
+                .WithMany()
+                .HasForeignKey(subscription => subscription.ScheduledDowngradePackageId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+    }
+
     private static void SeedData(ModelBuilder modelBuilder, DateTime createdAt)
     {
         modelBuilder.Entity<User>().HasData(
@@ -355,5 +465,40 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<SystemSetting>().HasData(
             new SystemSetting { Id = 1, ChunkStrategy = ChunkStrategy.FixedSize, ChunkSize = 1100, ChunkOverlap = 150, TopK = 5, UpdatedAt = createdAt, UpdatedByAdminId = 1 });
+
+        modelBuilder.Entity<SubscriptionPackage>().HasData(
+            new SubscriptionPackage
+            {
+                Id = 1,
+                Name = "Gói Dùng thử",
+                Description = "Gói miễn phí dành cho người dùng mới, trải nghiệm các tính năng cơ bản trong 7 ngày.",
+                Price = 0m,
+                DurationDays = 7,
+                MaxTokens = 1000,
+                IsActive = true,
+                CreatedAt = createdAt
+            },
+            new SubscriptionPackage
+            {
+                Id = 2,
+                Name = "Gói Sinh viên",
+                Description = "Phù hợp với sinh viên và giảng viên, sử dụng đầy đủ tính năng AI trong 30 ngày.",
+                Price = 99000m,
+                DurationDays = 30,
+                MaxTokens = 50000,
+                IsActive = true,
+                CreatedAt = createdAt
+            },
+            new SubscriptionPackage
+            {
+                Id = 3,
+                Name = "Gói Chuyên gia",
+                Description = "Dành cho người dùng cao cấp, mở rộng giới hạn token và ưu tiên xử lý trong 90 ngày.",
+                Price = 499000m,
+                DurationDays = 90,
+                MaxTokens = 250000,
+                IsActive = true,
+                CreatedAt = createdAt
+            });
     }
 }

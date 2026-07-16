@@ -1,0 +1,61 @@
+@model finalProject.Models.DemoVnPayViewModel
+
+@{
+    ViewData["Title"] = "VNPay Sandbox (Demo)";
+    var longAmount = long.TryParse(Model.Amount, out var a) ? a : 0;
+    var displayAmount = (longAmount / 100m).ToString("N0");
+}
+
+<div class="admin-page">
+    <div class="admin-hero">
+        <div>
+            <p class="dashboard-kicker">VNPay Sandbox</p>
+            <h1>Cổng thanh toán VNPay (Demo)</h1>
+            <p>Trang này mô phỏng cổng VNPay sandbox. Chọn thanh toán thành công hoặc hủy để xem luồng return URL / IPN.</p>
+        </div>
+        <a href="javascript:history.back()" class="btn btn-outline-primary">← Quay lại</a>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-6">
+            <div class="card-panel admin-panel text-center">
+                <div class="panel-heading">
+                    <p class="dashboard-kicker">Đơn hàng</p>
+                    <h2 class="section-title">@Model.OrderInfo</h2>
+                </div>
+                <p class="text-muted mb-1">Mã đơn</p>
+                <p class="admin-code fs-5">@Model.OrderId</p>
+                <p class="text-muted mb-1">Số tiền</p>
+                <p class="display-5 fw-bold text-primary">@displayAmount đ</p>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card-panel admin-panel">
+                <div class="panel-heading">
+                    <p class="dashboard-kicker">Phương thức</p>
+                    <h2 class="section-title">Chọn phương thức test</h2>
+                </div>
+
+                <form method="post" action="/Payments/DemoVnPayPay" class="d-grid gap-3">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="orderId" value="@Model.OrderId" />
+                    <input type="hidden" name="amount" value="@Model.Amount" />
+                    <input type="hidden" name="orderInfo" value="@Model.OrderInfo" />
+                    <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
+
+                    <button type="submit" name="success" value="true" class="btn btn-success btn-lg">
+                        Thanh toán thành công (00)
+                    </button>
+                    <button type="submit" name="success" value="false" class="btn btn-danger btn-lg">
+                        Hủy thanh toán (24)
+                    </button>
+                </form>
+
+                <p class="text-muted small mt-3 mb-0">
+                    Sau khi chọn, hệ thống sẽ redirect về ReturnUrl kèm chữ ký VNPay hợp lệ. Trạng thái đơn và subscription sẽ tự động cập nhật.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>

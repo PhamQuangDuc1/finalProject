@@ -4,6 +4,7 @@ using DAL.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DAL.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260716144832_Stage12SubscriptionPackagesAndPayments")]
+    partial class Stage12SubscriptionPackagesAndPayments
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -378,31 +381,6 @@ namespace DAL.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<DateTime?>("ExpiresAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("Gateway")
-                        .HasColumnType("int");
-
-                    b.Property<string>("GatewayDeeplink")
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
-                    b.Property<string>("GatewayOrderId")
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<string>("GatewayPayUrl")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("GatewayQrUrl")
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
-                    b.Property<string>("GatewayTransactionId")
-                        .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
-
                     b.Property<string>("Note")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
@@ -422,8 +400,6 @@ namespace DAL.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CreatedAt");
-
-                    b.HasIndex("GatewayOrderId");
 
                     b.HasIndex("ReviewedByAdminId");
 
@@ -795,9 +771,6 @@ namespace DAL.Migrations
                     b.Property<int>("RemainingTokens")
                         .HasColumnType("int");
 
-                    b.Property<int?>("ScheduledDowngradePackageId")
-                        .HasColumnType("int");
-
                     b.Property<DateTime>("StartDate")
                         .HasColumnType("datetime2");
 
@@ -810,8 +783,6 @@ namespace DAL.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("PaymentId");
-
-                    b.HasIndex("ScheduledDowngradePackageId");
 
                     b.HasIndex("SubscriptionPackageId");
 
@@ -1010,11 +981,6 @@ namespace DAL.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("DAL.Entities.SubscriptionPackage", "ScheduledDowngradePackage")
-                        .WithMany()
-                        .HasForeignKey("ScheduledDowngradePackageId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
                     b.HasOne("DAL.Entities.SubscriptionPackage", "SubscriptionPackage")
                         .WithMany()
                         .HasForeignKey("SubscriptionPackageId")
@@ -1028,8 +994,6 @@ namespace DAL.Migrations
                         .IsRequired();
 
                     b.Navigation("Payment");
-
-                    b.Navigation("ScheduledDowngradePackage");
 
                     b.Navigation("SubscriptionPackage");
 

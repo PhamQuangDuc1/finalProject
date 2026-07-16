@@ -33,4 +33,10 @@ public class User
     public ICollection<SystemSetting> UpdatedSystemSettings { get; set; } = new List<SystemSetting>();
 
     public ICollection<AiUsageLog> AiUsageLogs { get; set; } = new List<AiUsageLog>();
+
+    public ICollection<Payment> Payments { get; set; } = new List<Payment>();
+
+    public ICollection<Payment> ReviewedPayments { get; set; } = new List<Payment>();
+
+    public ICollection<UserSubscription> UserSubscriptions { get; set; } = new List<UserSubscription>();
 }

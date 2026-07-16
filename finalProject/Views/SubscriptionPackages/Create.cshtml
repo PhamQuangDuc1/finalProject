@@ -1,0 +1,19 @@
+@model SubscriptionPackageFormViewModel
+
+@{
+    ViewData["Title"] = "Tạo gói đăng ký";
+}
+
+<section class="card-panel">
+    <h1 class="section-title">Tạo gói đăng ký</h1>
+    <p class="text-muted">Thiết lập giá, thời hạn và giới hạn token cho một gói đăng ký mới.</p>
+    <form asp-action="Create" method="post">
+        <partial name="_Form" model="Model" />
+        <button type="submit" class="btn btn-primary">Tạo</button>
+        <a class="btn btn-outline-secondary" asp-action="Index">Hủy</a>
+    </form>
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

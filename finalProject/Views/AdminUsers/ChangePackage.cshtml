@@ -1,0 +1,120 @@
+@model BLL.DTOs.AdminChangePackageFormDto
+
+@{
+    ViewData["Title"] = "Đổi gói đăng ký";
+    var current = Model.CurrentSubscription;
+}
+
+<div class="admin-page">
+    <div class="admin-hero">
+        <div>
+            <p class="dashboard-kicker">Người dùng</p>
+            <h1>Đổi gói đăng ký</h1>
+            <p>Chọn gói mới cho <strong>@current.FullName</strong> (@@@current.Username). Có thể áp dụng ngay hoặc chờ hết hạn gói hiện tại khi hạ cấp.</p>
+        </div>
+        <a class="btn btn-outline-secondary" asp-action="Index">Quay lại</a>
+    </div>
+
+    @if (TempData["ErrorMessage"] is string errorMessage)
+    {
+        <div class="alert alert-danger" role="alert">@errorMessage</div>
+    }
+
+    <section class="card-panel admin-panel mb-4">
+        <div class="panel-heading">
+            <p class="dashboard-kicker">Hiện tại</p>
+            <h2 class="section-title">@current.SubscriptionPackageName</h2>
+        </div>
+        <div class="row g-3">
+            <div class="col-md-3 col-sm-6">
+                <p class="dashboard-kicker">Bắt đầu</p>
+                <p class="fw-semibold mb-0">@current.StartDate.ToLocalTime().ToString("dd/MM/yyyy")</p>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <p class="dashboard-kicker">Hết hạn</p>
+                <p class="fw-semibold mb-0">@current.EndDate.ToLocalTime().ToString("dd/MM/yyyy")</p>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <p class="dashboard-kicker">Còn lại</p>
+                <p class="fw-semibold mb-0">@current.DaysRemaining ngày</p>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <p class="dashboard-kicker">Token</p>
+                <p class="fw-semibold mb-0">@current.RemainingTokens / @current.MaxTokens</p>
+            </div>
+        </div>
+        @if (!string.IsNullOrWhiteSpace(current.ScheduledDowngradePackageName))
+        {
+            <div class="alert alert-warning mt-3 mb-0" role="alert">
+                Đã lên lịch hạ cấp về <strong>@current.ScheduledDowngradePackageName</strong> khi hết hạn. Thao tác dưới đây sẽ thay thế lịch trình này.
+            </div>
+        }
+    </section>
+
+    <section class="card-panel admin-panel">
+        <div class="panel-heading">
+            <p class="dashboard-kicker">Hành động</p>
+            <h2 class="section-title">Chọn gói mới</h2>
+        </div>
+        <form asp-action="ChangePackage" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="CurrentSubscription.SubscriptionId" name="SubscriptionId" value="@current.SubscriptionId" />
+
+            @{
+                var otherPackages = Model.AvailablePackages.Where(p => p.Id != current.SubscriptionPackageId).ToList();
+                var currentMaxTokens = current.MaxTokens;
+            }
+
+            @if (otherPackages.Count == 0)
+            {
+                <p class="text-muted">Không có gói khác đang hoạt động để chuyển đổi.</p>
+            }
+            else
+            {
+                <div class="row g-3 mb-3">
+                    @foreach (var package in otherPackages)
+                    {
+                        var isUpgrade = package.MaxTokens > currentMaxTokens;
+                        <div class="col-md-4">
+                            <label class="card-panel admin-panel h-100 d-block package-option" style="cursor:pointer;">
+                                <input type="radio" name="TargetPackageId" value="@package.Id" class="form-check-input me-2" required />
+                                <strong>@package.Name</strong>
+                                <div class="text-muted small">@package.Description</div>
+                                <div class="mt-2 small">
+                                    Giá: <strong>@package.Price.ToString("N0") đ</strong> · @package.DurationDays ngày · @package.MaxTokens.ToString("N0") token
+                                </div>
+                                <span class="badge rounded-pill @(isUpgrade ? "text-bg-success" : "text-bg-warning") mt-2">
+                                    @(isUpgrade ? "Nâng cấp" : "Hạ cấp")
+                                </span>
+                            </label>
+                        </div>
+                    }
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Thời điểm áp dụng (áp dụng khi hạ cấp)</label>
+                    <div class="d-flex gap-3">
+                        <label class="form-check">
+                            <input class="form-check-input" type="radio" name="ApplyMode" value="Immediate" checked />
+                            <span class="form-check-label">Áp dụng ngay</span>
+                        </label>
+                        <label class="form-check">
+                            <input class="form-check-input" type="radio" name="ApplyMode" value="AtExpiry" />
+                            <span class="form-check-label">Chờ hết hạn gói hiện tại</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Lý do / ghi chú (tùy chọn)</label>
+                    <textarea class="form-control" name="Reason" rows="2" maxlength="500" placeholder="Ghi chú cho việc thay đổi gói"></textarea>
+                </div>
+
+                <div class="d-flex justify-content-end gap-2">
+                    <a class="btn btn-outline-secondary" asp-action="Index">Hủy</a>
+                    <button type="submit" class="btn btn-primary">Xác nhận đổi gói</button>
+                </div>
+            }
+        </form>
+    </section>
+</div>

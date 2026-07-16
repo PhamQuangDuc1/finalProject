@@ -21,6 +21,9 @@ public static class DependencyInjection
         services.AddScoped<ISystemSettingRepository, SystemSettingRepository>();
         services.AddScoped<IAiUsageRepository, AiUsageRepository>();
         services.AddScoped<ITokenUsageRepository, TokenUsageRepository>();
+        services.AddScoped<ISubscriptionPackageRepository, SubscriptionPackageRepository>();
+        services.AddScoped<IPaymentRepository, PaymentRepository>();
+        services.AddScoped<IUserSubscriptionRepository, UserSubscriptionRepository>();
 
         return services;
     }

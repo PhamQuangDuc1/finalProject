@@ -1,0 +1,19 @@
+@model SubscriptionPackageFormViewModel
+
+@{
+    ViewData["Title"] = "Sửa gói đăng ký";
+}
+
+<section class="card-panel">
+    <h1 class="section-title">Sửa gói đăng ký</h1>
+    <form asp-action="Edit" method="post">
+        <input type="hidden" asp-for="Id" />
+        <partial name="_Form" model="Model" />
+        <button type="submit" class="btn btn-primary">Lưu thay đổi</button>
+        <a class="btn btn-outline-secondary" asp-action="Index">Hủy</a>
+    </form>
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

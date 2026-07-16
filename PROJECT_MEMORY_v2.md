@@ -17,11 +17,12 @@ Completed modules:
 - Chunk Configuration
 - AI Usage Dashboard
 - SignalR Realtime
+- Subscription Packages & Payments
 
 Current roles:
-Admin: system management only.
-Teacher: manage only own documents.
-Student: read-only.
+Admin: manage system, Subscription Packages, approve Payments.
+Teacher: manage own documents; buy/view own Subscription.
+Student: read-only documents; buy/view own Subscription.
 
 Before any new task:
 1. Read PROJECT_RULES.md

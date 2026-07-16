@@ -1,3 +1,4 @@
+using BLL.DTOs;
 using BLL.Interfaces;
 using BLL.Services;
 using DAL;
@@ -15,6 +16,7 @@ public static class DependencyInjection
     {
         services.AddDataAccess(connectionString);
         services.Configure<GeminiOptions>(configuration.GetSection("Gemini"));
+        services.Configure<VNPayOptions>(configuration.GetSection("VNPay"));
         services.AddScoped<IAuthenticationService, AuthenticationService>();
         services.AddScoped<IDashboardService, DashboardService>();
         services.AddScoped<IDocumentService, DocumentService>();
@@ -27,7 +29,11 @@ public static class DependencyInjection
         services.AddScoped<IAiCostEstimator, AiCostEstimator>();
         services.AddScoped<IAiUsageService, AiUsageService>();
         services.AddScoped<ITokenUsageStatisticsService, TokenUsageStatisticsService>();
+        services.AddScoped<ISubscriptionPackageService, SubscriptionPackageService>();
+        services.AddScoped<IPaymentService, PaymentService>();
+        services.AddScoped<IAdminSubscriptionService, AdminSubscriptionService>();
         services.AddHttpClient<IAiQuestionAnsweringService, GeminiQuestionAnsweringService>();
+        services.AddScoped<IVnPayGateway, VnPayGateway>();
 
         return services;
     }

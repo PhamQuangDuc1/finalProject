@@ -1,0 +1,223 @@
+@model IReadOnlyList<BLL.DTOs.PaymentDto>
+@using BLL.DTOs
+
+@{
+    ViewData["Title"] = "Gói đăng ký của tôi";
+    var activeSubscription = ViewData["ActiveSubscription"] as UserSubscriptionDto;
+    var packages = ViewData["Packages"] as IReadOnlyList<SubscriptionPackageDto> ?? Array.Empty<SubscriptionPackageDto>();
+    var completedCount = Model.Count(p => p.Status == DAL.Entities.PaymentStatus.Completed);
+    var totalSpent = Model.Where(p => p.Status == DAL.Entities.PaymentStatus.Completed).Sum(p => p.Amount);
+    var pendingPayment = Model.FirstOrDefault(p => p.Status == DAL.Entities.PaymentStatus.Pending);
+}
+
+<div class="admin-page">
+    <div class="admin-hero">
+        <div>
+            <p class="dashboard-kicker">Dịch vụ AI</p>
+            <h1>Gói đăng ký của tôi</h1>
+            <p>Mua gói đăng ký qua VNPay để mở khóa các tính năng AI. Khi VNPay xác nhận thanh toán, gói sẽ tự động kích hoạt.</p>
+        </div>
+    </div>
+
+    @if (TempData["StatusMessage"] is string statusMessage)
+    {
+        <div class="alert alert-success" role="alert">@statusMessage</div>
+    }
+    @if (TempData["ErrorMessage"] is string errorMessage)
+    {
+        <div class="alert alert-danger" role="alert">@errorMessage</div>
+    }
+
+    @if (pendingPayment is not null)
+    {
+        <div class="alert alert-warning d-flex justify-content-between align-items-center flex-wrap gap-2" role="alert">
+            <div>
+                <strong>Đang chờ thanh toán VNPay.</strong> Mã đơn <span class="admin-code">#@pendingPayment.Id</span> · @pendingPayment.Amount.ToString("N0") đ
+                @if (pendingPayment.ExpiresAt is not null)
+                {
+                    <span> · Hết hạn lúc @pendingPayment.ExpiresAt.Value.ToLocalTime().ToString("HH:mm")</span>
+                }
+            </div>
+            <a asp-action="Checkout" asp-route-id="@pendingPayment.Id" class="btn btn-sm btn-warning">
+                Tiếp tục thanh toán
+            </a>
+        </div>
+    }
+
+    <section class="card-panel admin-panel mb-4">
+        <div class="panel-heading d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+                <p class="dashboard-kicker">Đăng ký hiện tại</p>
+                <h2 class="section-title mb-0">Trạng thái gói của bạn</h2>
+            </div>
+            <span class="badge rounded-pill @(activeSubscription is null ? "text-bg-secondary" : "text-bg-success") fs-6">
+                @(activeSubscription is null ? "Chưa kích hoạt" : "Đang hoạt động")
+            </span>
+        </div>
+        @if (activeSubscription is null)
+        {
+            <p class="text-muted mb-0">Bạn chưa có gói đăng ký nào đang hoạt động. Hãy chọn một gói bên dưới để bắt đầu.</p>
+        }
+        else
+        {
+            <dl class="row mb-0">
+                <dt class="col-sm-3">Tên gói</dt>
+                <dd class="col-sm-9">@activeSubscription.SubscriptionPackageName</dd>
+                <dt class="col-sm-3">Ngày bắt đầu</dt>
+                <dd class="col-sm-9">@activeSubscription.StartDate.ToLocalTime().ToString("g")</dd>
+                <dt class="col-sm-3">Ngày kết thúc</dt>
+                <dd class="col-sm-9">@activeSubscription.EndDate.ToLocalTime().ToString("g")</dd>
+                <dt class="col-sm-3">Còn lại</dt>
+                <dd class="col-sm-9">@activeSubscription.DaysRemaining ngày</dd>
+                <dt class="col-sm-3">Token AI</dt>
+                <dd class="col-sm-9">@activeSubscription.RemainingTokens.ToString("N0") / @activeSubscription.MaxTokens.ToString("N0")</dd>
+            </dl>
+        }
+    </section>
+
+    <section class="card-panel admin-panel mb-4">
+        <div class="panel-heading">
+            <p class="dashboard-kicker">Có sẵn</p>
+            <h2 class="section-title">Các gói đang mở bán</h2>
+        </div>
+        @if (packages.Count == 0)
+        {
+            <p class="text-muted mb-0">Hiện chưa có gói đăng ký nào đang được mở bán.</p>
+        }
+        else
+        {
+            <div class="row g-3">
+                @foreach (var package in packages)
+                {
+                    var canBuy = activeSubscription is null;
+                    <div class="col-md-4">
+                        <div class="card h-100 shadow-sm @(canBuy ? "" : "opacity-75")">
+                            <div class="card-body d-flex flex-column">
+                                <h5 class="card-title">@package.Name</h5>
+                                <p class="text-primary fs-3 fw-bold mb-2">@package.Price.ToString("N0") đ</p>
+                                <p class="text-muted">@package.DurationDays ngày · @package.MaxTokens.ToString("N0") token AI</p>
+                                @if (!string.IsNullOrWhiteSpace(package.Description))
+                                {
+                                    <p class="card-text">@package.Description</p>
+                                }
+                                @if (canBuy)
+                                {
+                                    <form asp-action="Buy" asp-controller="Payments" method="post" class="mt-auto">
+                                        <input type="hidden" name="packageId" value="@package.Id" />
+                                        <button type="submit" class="btn btn-primary w-100">
+                                            Thanh toán VNPay
+                                        </button>
+                                    </form>
+                                }
+                                else
+                                {
+                                    <button class="btn btn-outline-secondary w-100 mt-auto" disabled>
+                                        Đã có gói đang dùng
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </section>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-6">
+            <div class="card-panel admin-panel h-100">
+                <div class="panel-heading">
+                    <p class="dashboard-kicker">Tổng quan</p>
+                    <h2 class="section-title">Giao dịch thành công</h2>
+                </div>
+                <p class="display-5 fw-bold text-success mb-0">@completedCount</p>
+                <p class="text-muted mb-0">lần mua gói đăng ký</p>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card-panel admin-panel h-100">
+                <div class="panel-heading">
+                    <p class="dashboard-kicker">Tổng quan</p>
+                    <h2 class="section-title">Tổng chi tiêu</h2>
+                </div>
+                <p class="display-5 fw-bold text-primary mb-0">@totalSpent.ToString("N0") đ</p>
+                <p class="text-muted mb-0">đã thanh toán thành công</p>
+            </div>
+        </div>
+    </div>
+
+    <section class="card-panel admin-panel">
+        <div class="panel-heading">
+            <p class="dashboard-kicker">Lịch sử</p>
+            <h2 class="section-title">Lịch sử thanh toán của bạn</h2>
+        </div>
+        <div class="table-responsive">
+            <table class="table admin-table align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Mã thanh toán</th>
+                        <th>Gói</th>
+                        <th>Số tiền</th>
+                        <th>Cổng</th>
+                        <th>Trạng thái</th>
+                        <th>Ngày tạo</th>
+                        <th>Ngày hoàn tất</th>
+                        <th>Ghi chú</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @if (Model.Count == 0)
+                {
+                    <tr>
+                        <td colspan="8" class="text-muted">Bạn chưa có giao dịch thanh toán nào.</td>
+                    </tr>
+                }
+                else
+                {
+                    @foreach (var payment in Model)
+                    {
+                        <tr>
+                            <td>
+                                <span class="admin-code">#@payment.Id</span>
+                                @if (payment.Status == DAL.Entities.PaymentStatus.Pending)
+                                {
+                                    <div class="mt-1">
+                                        <a asp-action="Checkout" asp-route-id="@payment.Id" class="btn btn-sm btn-outline-warning">Tiếp tục</a>
+                                    </div>
+                                }
+                            </td>
+                            <td>@payment.SubscriptionPackageName</td>
+                            <td>@payment.Amount.ToString("N0") đ</td>
+                            <td>@GetGatewayLabel(payment.Gateway)</td>
+                            <td>
+                                <span class="badge rounded-pill @GetStatusClass(payment.Status)">@payment.StatusLabel</span>
+                            </td>
+                            <td>@payment.CreatedAt.ToLocalTime().ToString("g")</td>
+                            <td>@(payment.CompletedAt?.ToLocalTime().ToString("g") ?? "—")</td>
+                            <td>@(string.IsNullOrWhiteSpace(payment.Note) ? "—" : payment.Note)</td>
+                        </tr>
+                    }
+                }
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+
+@functions {
+    static string GetStatusClass(DAL.Entities.PaymentStatus status) => status switch
+    {
+        DAL.Entities.PaymentStatus.Completed => "text-bg-success",
+        DAL.Entities.PaymentStatus.Pending => "text-bg-warning",
+        DAL.Entities.PaymentStatus.Failed => "text-bg-danger",
+        _ => "text-bg-secondary"
+    };
+
+    static string GetGatewayLabel(DAL.Entities.PaymentGateway gateway) => gateway switch
+    {
+        DAL.Entities.PaymentGateway.None => "Không",
+        DAL.Entities.PaymentGateway.MoMo => "MoMo",
+        DAL.Entities.PaymentGateway.VNPay => "VNPay",
+        _ => gateway.ToString()
+    };
+}
