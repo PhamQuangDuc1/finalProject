@@ -513,6 +513,33 @@ public class DocumentServiceTests
     }
 
     [Fact]
+    public async Task ReindexIndexedDocumentsAsync_ReplacesChunksForIndexedDocuments_WhenAdminChangesChunkConfiguration()
+    {
+        var indexedDocument = CreateDocument(1, 2, DocumentStatus.Indexed, false, "Indexed", 10, "PRN222", "Software Engineering", 1);
+        indexedDocument.ExtractedContent = "one two three four five six seven eight";
+        var failedDocument = CreateDocument(2, 2, DocumentStatus.Failed, false, "Failed", 10, "PRN222", "Software Engineering", 1);
+        failedDocument.ExtractedContent = "alpha beta gamma delta";
+        var repository = new FakeDocumentRepository(new[] { indexedDocument, failedDocument });
+        var service = new DocumentService(
+            repository,
+            new FakeTeacherSubjectRepository(),
+            new FakeChunkingService(chunkSize: 3, chunkOverlap: 0));
+
+        var reindexed = await service.ReindexIndexedDocumentsAsync(
+            new CurrentUserDto { UserId = 1, Role = UserRole.Admin });
+
+        var document = Assert.Single(reindexed);
+        Assert.Equal(indexedDocument.Id, document.Id);
+        Assert.Collection(
+            indexedDocument.Chunks,
+            _ => { },
+            _ => { },
+            _ => { });
+        Assert.Single(failedDocument.Chunks);
+        Assert.Equal(1, repository.ReplaceChunkTransactionCalls);
+    }
+
+    [Fact]
     public async Task ArchiveDocumentAsync_Throws_WhenScheduledTimeIsLessThanSevenDaysAway()
     {
         var document = CreateDocument(1, 2, DocumentStatus.Indexed, false, "Owned", 10, "PRN222", "Software Engineering", 1);

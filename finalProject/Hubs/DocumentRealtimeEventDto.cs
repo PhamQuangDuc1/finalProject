@@ -22,5 +22,7 @@ public class DocumentRealtimeEventDto
 
     public string Status { get; set; } = string.Empty;
 
+    public int ChunkCount { get; set; }
+
     public DateTime OccurredAtUtc { get; set; }
 }

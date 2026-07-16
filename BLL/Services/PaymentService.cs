@@ -176,7 +176,7 @@ public class PaymentService : IPaymentService
             payment.Status = PaymentStatus.Completed;
             payment.CompletedAt = DateTime.UtcNow;
             payment.GatewayTransactionId = string.IsNullOrWhiteSpace(transId) ? null : transId;
-            payment.Note = $"VNPay thanh cong qua {source} (transId={payment.GatewayTransactionId}, amount={amountValue})";
+            payment.Note = $"VNPay thành công qua {source} (transId={payment.GatewayTransactionId}, amount={amountValue})";
             await _paymentRepository.UpdateAsync(payment, cancellationToken);
 
             var package = await _packageRepository.GetByIdAsync(payment.SubscriptionPackageId, cancellationToken)

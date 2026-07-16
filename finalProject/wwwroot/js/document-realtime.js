@@ -97,6 +97,11 @@
                 statusCell.textContent = payload.status || statusCell.textContent;
             }
 
+            const chunkCountCell = existingRow.querySelector("[data-document-chunk-count-cell]");
+            if (chunkCountCell && payload.chunkCount !== undefined && payload.chunkCount !== null) {
+                chunkCountCell.textContent = String(payload.chunkCount);
+            }
+
             existingRow.classList.add("table-info");
             window.setTimeout(function () {
                 existingRow.classList.remove("table-info");
@@ -128,7 +133,7 @@
                 <td>${escapeHtml(teacherName)}</td>
                 <td>${escapeHtml(formatTime(occurredAt))}</td>
                 <td data-document-status>${escapeHtml(payload.status)}</td>
-                <td></td>
+                <td data-document-chunk-count-cell>${escapeHtml(payload.chunkCount ?? "")}</td>
                 <td>
                     <div class="btn-group btn-group-sm" role="group">
                         <a class="btn btn-outline-primary" href="/Documents/Details/${payload.documentId}">Xem</a>
@@ -143,7 +148,7 @@
                 <td></td>
                 <td></td>
                 <td data-document-status>${escapeHtml(payload.status)}</td>
-                <td></td>
+                <td data-document-chunk-count-cell>${escapeHtml(payload.chunkCount ?? "")}</td>
                 <td>${escapeHtml(formatTime(occurredAt))}</td>
                 <td>
                     <div class="d-flex flex-wrap gap-1">

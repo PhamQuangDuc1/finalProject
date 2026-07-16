@@ -3,10 +3,12 @@ using BLL.DTOs;
 using BLL.Interfaces;
 using DAL.Entities;
 using finalProject.Authorization;
+using finalProject.Hubs;
 using finalProject.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.SignalR;
 
 namespace finalProject.Controllers;
 
@@ -14,10 +16,17 @@ namespace finalProject.Controllers;
 public class ChunkConfigurationsController : Controller
 {
     private readonly IChunkConfigurationService _chunkConfigurationService;
+    private readonly IDocumentService _documentService;
+    private readonly IHubContext<DocumentProcessingHub> _hubContext;
 
-    public ChunkConfigurationsController(IChunkConfigurationService chunkConfigurationService)
+    public ChunkConfigurationsController(
+        IChunkConfigurationService chunkConfigurationService,
+        IDocumentService documentService,
+        IHubContext<DocumentProcessingHub> hubContext)
     {
         _chunkConfigurationService = chunkConfigurationService;
+        _documentService = documentService;
+        _hubContext = hubContext;
     }
 
     [HttpGet]
@@ -40,13 +49,22 @@ public class ChunkConfigurationsController : Controller
 
         try
         {
-            await _chunkConfigurationService.UpdateAsync(GetCurrentUser(), new UpdateSystemSettingDto
+            var currentUser = GetCurrentUser();
+            await _chunkConfigurationService.UpdateAsync(currentUser, new UpdateSystemSettingDto
             {
                 ChunkStrategy = model.ChunkStrategy,
                 ChunkSize = model.ChunkSize,
                 ChunkOverlap = model.ChunkOverlap,
                 TopK = model.TopK
             }, cancellationToken);
+
+            var reindexedDocuments = await _documentService.ReindexIndexedDocumentsAsync(currentUser, cancellationToken);
+            foreach (var document in reindexedDocuments)
+            {
+                await BroadcastDocumentReindexedAsync(document, cancellationToken);
+            }
+
+            TempData["StatusMessage"] = $"Đã lưu cấu hình chunk và tạo lại chỉ mục cho {reindexedDocuments.Count} tài liệu.";
         }
         catch (UnauthorizedAccessException)
         {
@@ -58,8 +76,6 @@ public class ChunkConfigurationsController : Controller
             model.StrategyOptions = GetStrategyOptions(model.ChunkStrategy);
             return View(model);
         }
-
-        TempData["StatusMessage"] = "Đã lưu cấu hình chunk.";
         return RedirectToAction(nameof(Index));
     }
 
@@ -75,6 +91,30 @@ public class ChunkConfigurationsController : Controller
             UpdatedByAdminName = setting.UpdatedByAdminName,
             StrategyOptions = GetStrategyOptions(setting.ChunkStrategy)
         };
+    }
+
+    private async Task BroadcastDocumentReindexedAsync(DocumentDto document, CancellationToken cancellationToken)
+    {
+        var payload = new DocumentRealtimeEventDto
+        {
+            DocumentId = document.Id,
+            TeacherUploader = document.UploadedByTeacherName,
+            Document = document.Title,
+            Subject = document.SubjectName,
+            Title = document.Title,
+            SubjectName = document.SubjectName,
+            UpdatedByTeacherName = document.UploadedByTeacherName,
+            UpdatedAtUtc = DateTime.UtcNow,
+            Action = "Tạo lại chỉ mục theo cấu hình chunk mới",
+            Status = document.Status,
+            ChunkCount = document.ChunkCount,
+            OccurredAtUtc = DateTime.UtcNow
+        };
+
+        await _hubContext.Clients.Group(DocumentProcessingHub.AdminGroup)
+            .SendAsync("DocumentReindexed", payload, cancellationToken);
+        await _hubContext.Clients.Group(DocumentProcessingHub.GetTeacherGroupName(document.UploadedByTeacherId))
+            .SendAsync("DocumentReindexed", payload, cancellationToken);
     }
 
     private static IReadOnlyList<SelectListItem> GetStrategyOptions(ChunkStrategy selectedStrategy)

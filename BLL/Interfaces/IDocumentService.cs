@@ -37,6 +37,8 @@ public interface IDocumentService
 
     Task ReindexDocumentAsync(CurrentUserDto currentUser, int documentId, CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<DocumentDto>> ReindexIndexedDocumentsAsync(CurrentUserDto currentUser, CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<DocumentDto>> GetDocumentsForAdminAsync(CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<DocumentDto>> GetDocumentsForTeacherAsync(int teacherId, CancellationToken cancellationToken = default);

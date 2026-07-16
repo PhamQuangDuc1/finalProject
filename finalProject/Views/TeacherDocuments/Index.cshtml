@@ -1,7 +1,6 @@
 @model TeacherDocumentsIndexViewModel
 
 @{
-    var minimumArchiveAt = DateTime.Now.AddDays(7).ToString("yyyy-MM-ddTHH:mm");
     ViewData["Title"] = "Tài liệu của tôi";
 }
 
@@ -124,26 +123,15 @@
                             <td>@(string.IsNullOrWhiteSpace(document.ChapterName) ? "Chưa gán" : document.ChapterName)</td>
                             <td>@document.FileName</td>
                             <td data-document-status><span class="badge rounded-pill text-bg-light">@document.Status</span></td>
-                            <td>@document.ChunkCount</td>
+                            <td data-document-chunk-count-cell>@document.ChunkCount</td>
                             <td>@document.UploadedAtUtc.ToLocalTime().ToString("g")</td>
                             <td>
                                 <div class="admin-actions">
-                                    <a class="btn btn-sm btn-outline-primary" asp-action="Details" asp-route-id="@document.Id">Xem</a>
                                     @if (Model.CanManageDocuments)
                                     {
-                                        <a class="btn btn-sm btn-outline-primary" asp-action="Edit" asp-route-id="@document.Id">Sửa</a>
+                                        <a class="btn btn-sm btn-outline-primary" asp-action="Edit" asp-route-id="@document.Id">Chỉnh sửa</a>
                                     }
                                     <a class="btn btn-sm btn-outline-primary" asp-action="Download" asp-route-id="@document.Id">Tải xuống</a>
-                                    @if (Model.CanManageDocuments)
-                                    {
-                                        <form asp-action="Archive" asp-route-id="@document.Id" method="post" class="admin-inline-form">
-                                            <input name="scheduledArchiveAt" type="datetime-local" class="form-control form-control-sm" min="@minimumArchiveAt" required disabled="@document.IsArchived" />
-                                            <button type="submit" class="btn btn-sm btn-outline-warning" disabled="@document.IsArchived">Lên lịch ẩn</button>
-                                        </form>
-                                        <form asp-action="Reindex" asp-route-id="@document.Id" method="post">
-                                            <button type="submit" class="btn btn-sm btn-outline-secondary">Re-index</button>
-                                        </form>
-                                    }
                                 </div>
                             </td>
                         </tr>

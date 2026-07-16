@@ -17,10 +17,7 @@
 <section class="home-landing" aria-label="StudyMate AI">
     <div class="studymate-hero">
         <div class="studymate-hero-media" aria-hidden="true">
-            <video autoplay loop muted playsinline class="studymate-hero-video">
-                @* TODO: Thay src rỗng bằng video nền chính thức của StudyMate AI khi có asset trong dự án. *@
-                <source src="" type="video/mp4" />
-            </video>
+            <img class="studymate-hero-image" src="~/images/library-hero.png" alt="Kệ sách thư viện" />
         </div>
         <div class="studymate-hero-overlay" aria-hidden="true"></div>
 
@@ -50,18 +47,6 @@
                 </a>
             }
         </div>
-
-        <nav class="studymate-floating-nav" aria-label="Điều hướng nổi">
-            <a class="studymate-logo-pill" asp-controller="Home" asp-action="Index" aria-label="StudyMate AI">✦</a>
-            <a class="studymate-nav-link" href="#studymate-features">Tính năng</a>
-            <a class="studymate-nav-link" asp-controller="StudentDocuments" asp-action="Index">Tài liệu</a>
-            <a class="studymate-contact-pill" href="mailto:hello@studymate.ai">
-                Liên hệ ngay
-                <svg viewBox="0 0 16 16" focusable="false" aria-hidden="true">
-                    <path fill="currentColor" d="M6.22 3.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 1 1-1.06-1.06L9.94 8 6.22 4.28a.75.75 0 0 1 0-1.06Z" />
-                </svg>
-            </a>
-        </nav>
     </div>
 
     <div id="studymate-features" class="studymate-marquee" aria-label="Tính năng StudyMate AI">

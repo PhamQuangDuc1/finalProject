@@ -1,11 +1,32 @@
 @model DocumentEditViewModel
 
 @{
+    var minimumArchiveAt = DateTime.Now.AddDays(7).ToString("yyyy-MM-ddTHH:mm");
     ViewData["Title"] = "Sửa tài liệu";
 }
 
 <section class="card-panel col-lg-10">
     <h1 class="section-title">Sửa tài liệu</h1>
+
+    @if (TempData["StatusMessage"] is string statusMessage)
+    {
+        <div class="alert alert-info" role="alert">@statusMessage</div>
+    }
+
+    <div class="border rounded p-3 mb-3">
+        <h2 class="h6 mb-3">Thao tác quản lý</h2>
+        <form asp-action="Archive" asp-route-id="@Model.Id" method="post" class="row g-2 align-items-end">
+            <input type="hidden" name="returnToEdit" value="true" />
+            <div class="col-md-8">
+                <label for="scheduledArchiveAt" class="form-label">Ẩn sau ngày</label>
+                <input id="scheduledArchiveAt" name="scheduledArchiveAt" type="datetime-local" class="form-control" min="@minimumArchiveAt" required />
+            </div>
+            <div class="col-md-4">
+                <button type="submit" class="btn btn-outline-warning w-100">Lên lịch ẩn</button>
+            </div>
+        </form>
+    </div>
+
     <form asp-action="Edit" method="post">
         <input asp-for="Id" type="hidden" />
         <input asp-for="OriginalFileName" type="hidden" />

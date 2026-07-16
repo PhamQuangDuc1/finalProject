@@ -1,8 +1,13 @@
 @model BLL.DTOs.DashboardDto
+@using System.Text.Json
+@using BLL.DTOs
 @using DAL.Entities
 
 @{
     ViewData["Title"] = Model.Title;
+    var dashboardAiCitations = TempData["DashboardAiCitations"] is string citationJson
+        ? JsonSerializer.Deserialize<IReadOnlyList<AiAnswerCitationDto>>(citationJson) ?? Array.Empty<AiAnswerCitationDto>()
+        : Array.Empty<AiAnswerCitationDto>();
 }
 
 <div class="dashboard-page">
@@ -82,9 +87,38 @@
                 <div>
                     <p class="dashboard-kicker">Trợ lý AI</p>
                     <h2 class="section-title">Chat AI với tài liệu</h2>
-                    <p class="text-muted mb-0">Chọn tài liệu đã index và hỏi AI dựa trên nội dung chunk.</p>
+                    <p class="text-muted mb-0">Hỏi AI dựa trên toàn bộ tài liệu đã index. Câu trả lời sẽ kèm trích dẫn tài liệu.</p>
                 </div>
             </div>
+
+            @if (TempData["DashboardAiErrorMessage"] is string dashboardAiError)
+            {
+                <div class="alert alert-warning" role="alert">@dashboardAiError</div>
+            }
+
+            @if (TempData["DashboardAiAnswer"] is string dashboardAiAnswer)
+            {
+                <div class="alert alert-info" role="status">
+                    @if (TempData["DashboardAiQuestion"] is string dashboardAiQuestion)
+                    {
+                        <div class="fw-semibold mb-2">Câu hỏi: @dashboardAiQuestion</div>
+                    }
+                    <div class="mb-3">@dashboardAiAnswer</div>
+                    @if (dashboardAiCitations.Count > 0)
+                    {
+                        <div class="fw-semibold mb-2">Trích dẫn tài liệu</div>
+                        <ol class="mb-0">
+                            @foreach (var citation in dashboardAiCitations)
+                            {
+                                <li class="mb-2">
+                                    <div class="fw-semibold">@citation.DocumentTitle (@citation.SubjectName) - Chunk @citation.ChunkIndex</div>
+                                    <div>@citation.Excerpt</div>
+                                </li>
+                            }
+                        </ol>
+                    }
+                </div>
+            }
 
             @if (Model.RecentUploads.Count == 0)
             {
@@ -92,19 +126,10 @@
             }
             else
             {
-                <form asp-controller="StudentDocuments" asp-action="AskAi" method="post" class="d-grid gap-3">
+                <form asp-controller="Dashboard" asp-action="AskAi" method="post" class="d-grid gap-3">
                     @Html.AntiForgeryToken()
                     <div class="row g-3">
-                        <div class="col-md-5">
-                            <label for="aiDocumentId" class="form-label">Tài liệu</label>
-                            <select id="aiDocumentId" name="id" class="form-select" required>
-                                @foreach (var upload in Model.RecentUploads)
-                                {
-                                    <option value="@upload.Id">@upload.Title - @upload.SubjectName</option>
-                                }
-                            </select>
-                        </div>
-                        <div class="col-md-7">
+                        <div class="col-12">
                             <label for="aiQuestion" class="form-label">Câu hỏi</label>
                             <textarea id="aiQuestion" name="question" class="form-control" rows="3" maxlength="1000" required></textarea>
                         </div>

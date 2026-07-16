@@ -279,7 +279,7 @@ public class DocumentService : IDocumentService
         var minimumArchiveAt = DateTime.UtcNow.AddDays(MinimumArchiveDelayDays);
         if (scheduledArchiveAtUtc < minimumArchiveAt)
         {
-            throw new InvalidOperationException("Thoi gian an tai lieu phai cach hien tai it nhat 7 ngay.");
+            throw new InvalidOperationException("Thời gian ẩn tài liệu phải cách hiện tại ít nhất 7 ngày.");
         }
 
         document.ScheduledArchiveAt = scheduledArchiveAtUtc;
@@ -370,43 +370,24 @@ public class DocumentService : IDocumentService
             throw new InvalidOperationException("Archived documents cannot be re-indexed.");
         }
 
-        var now = DateTime.UtcNow;
-        document.Status = DocumentStatus.Processing;
-        document.ErrorMessage = null;
-        document.UpdatedAt = now;
+        await ReindexDocumentEntityAsync(document, cancellationToken);
+    }
 
-        try
+    public async Task<IReadOnlyList<DocumentDto>> ReindexIndexedDocumentsAsync(
+        CurrentUserDto currentUser,
+        CancellationToken cancellationToken = default)
+    {
+        AuthorizationGuard.RequireRole(currentUser, UserRole.Admin);
+
+        var documents = await _documentRepository.GetAllForAdminAsync(cancellationToken);
+        var reindexedDocuments = new List<DocumentDto>();
+        foreach (var document in documents.Where(document => document.Status == DocumentStatus.Indexed && !document.IsArchived))
         {
-            var workingContent = GetWorkingContent(document);
-            if (string.IsNullOrWhiteSpace(workingContent))
-            {
-                if (!File.Exists(document.FilePath))
-                {
-                    throw new FileNotFoundException("The stored document file could not be found.", document.FilePath);
-                }
-
-                var content = await File.ReadAllBytesAsync(document.FilePath, cancellationToken);
-                var extension = Path.GetExtension(document.OriginalFileName);
-                workingContent = ExtractText(content, extension);
-                document.ExtractedContent = workingContent;
-            }
-
-            var chunks = await _chunkingService.CreateChunksAsync(document.Id, workingContent, cancellationToken);
-
-            document.Status = DocumentStatus.Indexed;
-            document.ErrorMessage = null;
-            document.UpdatedAt = DateTime.UtcNow;
-
-            await _documentRepository.ReplaceChunksInTransactionAsync(document, chunks, cancellationToken);
+            await ReindexDocumentEntityAsync(document, cancellationToken);
+            reindexedDocuments.Add(ToDto(document));
         }
-        catch (Exception ex)
-        {
-            document.Status = DocumentStatus.Failed;
-            document.ErrorMessage = ex.Message;
-            document.UpdatedAt = DateTime.UtcNow;
 
-            await _documentRepository.UpdateAsync(document, cancellationToken);
-        }
+        return reindexedDocuments;
     }
 
     public Task<IReadOnlyList<DocumentDto>> GetDocumentsForAdminAsync(CancellationToken cancellationToken = default)
@@ -596,6 +577,47 @@ public class DocumentService : IDocumentService
             document.ScheduledArchiveAt = null;
             document.ScheduledArchiveByTeacherId = null;
             document.UpdatedAt = now;
+
+            await _documentRepository.UpdateAsync(document, cancellationToken);
+        }
+    }
+
+    private async Task ReindexDocumentEntityAsync(Document document, CancellationToken cancellationToken)
+    {
+        var now = DateTime.UtcNow;
+        document.Status = DocumentStatus.Processing;
+        document.ErrorMessage = null;
+        document.UpdatedAt = now;
+
+        try
+        {
+            var workingContent = GetWorkingContent(document);
+            if (string.IsNullOrWhiteSpace(workingContent))
+            {
+                if (!File.Exists(document.FilePath))
+                {
+                    throw new FileNotFoundException("Không tìm thấy tệp tài liệu đã lưu.", document.FilePath);
+                }
+
+                var content = await File.ReadAllBytesAsync(document.FilePath, cancellationToken);
+                var extension = Path.GetExtension(document.OriginalFileName);
+                workingContent = ExtractText(content, extension);
+                document.ExtractedContent = workingContent;
+            }
+
+            var chunks = await _chunkingService.CreateChunksAsync(document.Id, workingContent, cancellationToken);
+
+            document.Status = DocumentStatus.Indexed;
+            document.ErrorMessage = null;
+            document.UpdatedAt = DateTime.UtcNow;
+
+            await _documentRepository.ReplaceChunksInTransactionAsync(document, chunks, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            document.Status = DocumentStatus.Failed;
+            document.ErrorMessage = ex.Message;
+            document.UpdatedAt = DateTime.UtcNow;
 
             await _documentRepository.UpdateAsync(document, cancellationToken);
         }

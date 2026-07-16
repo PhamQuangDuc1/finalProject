@@ -8,4 +8,9 @@ public interface IAiQuestionAnsweringService
         DocumentDto document,
         string question,
         CancellationToken cancellationToken = default);
+
+    Task<AiQuestionAnswerDto> AnswerDocumentsQuestionAsync(
+        IReadOnlyList<DocumentDto> documents,
+        string question,
+        CancellationToken cancellationToken = default);
 }

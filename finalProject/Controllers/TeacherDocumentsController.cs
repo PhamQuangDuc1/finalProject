@@ -70,7 +70,7 @@ public class TeacherDocumentsController : Controller
         var model = await BuildUploadViewModelAsync(new DocumentUploadViewModel(), cancellationToken);
         if (model.SubjectOptions.Count == 0)
         {
-            TempData["StatusMessage"] = "Chi truong bo mon moi duoc tai tai lieu len.";
+            TempData["StatusMessage"] = "Chỉ trưởng bộ môn mới được tải tài liệu lên.";
             return RedirectToAction(nameof(Index));
         }
 
@@ -89,7 +89,7 @@ public class TeacherDocumentsController : Controller
 
         if (model.File.Length == 0)
         {
-            ModelState.AddModelError(nameof(model.File), "Tep tai len khong duoc rong.");
+            ModelState.AddModelError(nameof(model.File), "Tệp tải lên không được rỗng.");
             await BuildUploadViewModelAsync(model, cancellationToken);
             return View(model);
         }
@@ -97,7 +97,7 @@ public class TeacherDocumentsController : Controller
         var extension = Path.GetExtension(model.File.FileName);
         if (!AllowedUploadExtensions.Contains(extension))
         {
-            ModelState.AddModelError(nameof(model.File), "Chi cho phep tai len file PDF, DOCX hoac PPTX.");
+            ModelState.AddModelError(nameof(model.File), "Chỉ cho phép tải lên file PDF, DOCX hoặc PPTX.");
             await BuildUploadViewModelAsync(model, cancellationToken);
             return View(model);
         }
@@ -136,7 +136,7 @@ public class TeacherDocumentsController : Controller
 
         await BroadcastDocumentEventAsync("DocumentCreated", "Tạo mới", documentId, currentUser, cancellationToken);
 
-        TempData["StatusMessage"] = $"Da upload tai lieu #{documentId}. He thong da xu ly chunk va index theo cau hinh hien tai.";
+        TempData["StatusMessage"] = $"Đã upload tài liệu #{documentId}. Hệ thống đã xử lý chunk và index theo cấu hình hiện tại.";
 
         return RedirectToAction(nameof(Index));
     }
@@ -244,7 +244,7 @@ public class TeacherDocumentsController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Archive(int id, DateTime scheduledArchiveAt, CancellationToken cancellationToken)
+    public async Task<IActionResult> Archive(int id, DateTime scheduledArchiveAt, bool returnToEdit = false, CancellationToken cancellationToken = default)
     {
         var currentUser = GetCurrentUser();
         try
@@ -258,14 +258,16 @@ public class TeacherDocumentsController : Controller
         catch (InvalidOperationException ex)
         {
             TempData["StatusMessage"] = ex.Message;
-            return RedirectToAction(nameof(Details), new { id });
+            return RedirectToAction(returnToEdit ? nameof(Edit) : nameof(Details), new { id });
         }
 
         await BroadcastDocumentEventAsync("DocumentUpdated", "Đã lên lịch ẩn", id, currentUser, cancellationToken);
 
-        TempData["StatusMessage"] = "Da len lich an tai lieu.";
+        TempData["StatusMessage"] = "Đã lên lịch ẩn tài liệu.";
 
-        return RedirectToAction(nameof(Index));
+        return returnToEdit
+            ? RedirectToAction(nameof(Edit), new { id })
+            : RedirectToAction(nameof(Index));
     }
 
     [HttpPost]
@@ -289,7 +291,7 @@ public class TeacherDocumentsController : Controller
 
         await BroadcastDocumentEventAsync("DocumentReindexed", "Tạo lại chỉ mục", id, currentUser, cancellationToken);
 
-        TempData["StatusMessage"] = "Da re-index tai lieu theo cau hinh chunk hien tai.";
+        TempData["StatusMessage"] = "Đã re-index tài liệu theo cấu hình chunk hiện tại.";
 
         return RedirectToAction(nameof(Details), new { id });
     }
@@ -313,7 +315,7 @@ public class TeacherDocumentsController : Controller
 
         if (!System.IO.File.Exists(document.FilePath))
         {
-            TempData["StatusMessage"] = "Tep tai lieu chua co tren he thong luu tru.";
+            TempData["StatusMessage"] = "Tệp tài liệu chưa có trên hệ thống lưu trữ.";
             return RedirectToAction(nameof(Index));
         }
 
@@ -404,6 +406,7 @@ public class TeacherDocumentsController : Controller
             UpdatedAtUtc = DateTime.UtcNow,
             Action = action,
             Status = document.Status,
+            ChunkCount = document.ChunkCount,
             OccurredAtUtc = DateTime.UtcNow
         };
 

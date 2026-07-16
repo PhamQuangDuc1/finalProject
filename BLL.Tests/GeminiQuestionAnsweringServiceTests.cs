@@ -79,6 +79,71 @@ public class GeminiQuestionAnsweringServiceTests
             service.AnswerDocumentQuestionAsync(new DocumentDto(), "   "));
     }
 
+    [Fact]
+    public async Task AnswerDocumentsQuestionAsync_UsesMultipleDocuments_AndReturnsCitations()
+    {
+        string? capturedPrompt = null;
+        using var httpClient = new HttpClient(new StubHttpMessageHandler(request =>
+        {
+            capturedPrompt = request.Content!.ReadAsStringAsync().GetAwaiter().GetResult();
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("""
+                {
+                  "candidates": [
+                    {
+                      "content": {
+                        "parts": [
+                          { "text": "Kiểm thử phần mềm dùng ca kiểm thử để phát hiện lỗi." }
+                        ]
+                      }
+                    }
+                  ],
+                  "usageMetadata": {
+                    "promptTokenCount": 20,
+                    "candidatesTokenCount": 12,
+                    "totalTokenCount": 32
+                  },
+                  "modelVersion": "gemini-3.5-flash"
+                }
+                """)
+            };
+        }));
+        var service = new GeminiQuestionAnsweringService(
+            httpClient,
+            Options.Create(new GeminiOptions { ApiKey = "test-key", Model = "gemini-flash-latest" }));
+        var documents = new[]
+        {
+            new DocumentDto
+            {
+                Id = 1,
+                Title = "Kiểm thử phần mềm",
+                SubjectName = "SWT301",
+                Chunks = new[]
+                {
+                    new DocumentChunkDto { ChunkIndex = 1, Content = "Kiểm thử phần mềm sử dụng ca kiểm thử để phát hiện lỗi." }
+                }
+            },
+            new DocumentDto
+            {
+                Id = 2,
+                Title = "Lập trình .NET",
+                SubjectName = "PRN222",
+                Chunks = new[]
+                {
+                    new DocumentChunkDto { ChunkIndex = 1, Content = "ASP.NET Core MVC dùng controller và view." }
+                }
+            }
+        };
+
+        var answer = await service.AnswerDocumentsQuestionAsync(documents, "Kiểm thử dùng để làm gì?");
+
+        Assert.Contains("SWT301", capturedPrompt);
+        Assert.Contains("PRN222", capturedPrompt);
+        Assert.Equal("Kiểm thử phần mềm", answer.Citations.First().DocumentTitle);
+        Assert.Contains("ca kiểm thử", answer.Citations.First().Excerpt);
+    }
+
     private sealed class StubHttpMessageHandler : HttpMessageHandler
     {
         private readonly Func<HttpRequestMessage, HttpResponseMessage> _responseFactory;

@@ -73,7 +73,7 @@ public class StudentDocumentsController : Controller
 
         if (string.IsNullOrWhiteSpace(question))
         {
-            TempData["AiErrorMessage"] = "Vui long nhap cau hoi.";
+            TempData["AiErrorMessage"] = "Vui lòng nhập câu hỏi.";
             return RedirectToAction(nameof(Details), new { id });
         }
 
@@ -101,7 +101,7 @@ public class StudentDocumentsController : Controller
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
-            TempData["AiErrorMessage"] = $"Khong the goi AI luc nay: {exception.Message}";
+            TempData["AiErrorMessage"] = $"Không thể gọi AI lúc này: {exception.Message}";
         }
 
         return RedirectToAction(nameof(Details), new { id });

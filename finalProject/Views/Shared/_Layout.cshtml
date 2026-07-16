@@ -36,14 +36,12 @@
                         <a asp-controller="TeacherDocuments" asp-action="Index">Tài liệu của tôi</a>
                         <a asp-controller="TeacherDocuments" asp-action="Upload">Tải tài liệu lên</a>
                         <a asp-controller="Payments" asp-action="Index">Gói đăng ký của tôi</a>
-                        <a asp-controller="Dashboard" asp-action="Index">Hồ sơ</a>
                     }
 
                     @if (User.IsInRole(StudyMateRoles.Student))
                     {
                         <a asp-controller="StudentDocuments" asp-action="Index">Tài liệu học tập</a>
                         <a asp-controller="Payments" asp-action="Index">Gói đăng ký của tôi</a>
-                        <a asp-controller="Dashboard" asp-action="Index">Hồ sơ</a>
                     }
                 </nav>
             </aside>
