@@ -17,21 +17,23 @@ public class UserTokenSummaryViewComponent : ViewComponent
 
     public async Task<IViewComponentResult> InvokeAsync(CancellationToken cancellationToken = default)
     {
-        if (User.Identity?.IsAuthenticated != true)
+        var principal = User as ClaimsPrincipal;
+        if (principal?.Identity?.IsAuthenticated != true)
         {
             return View(new UserTokenSummaryViewModel());
         }
 
-        var userIdClaim = (User as ClaimsPrincipal)?.FindFirstValue(ClaimTypes.NameIdentifier);
+        var userIdClaim = principal.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrWhiteSpace(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
         {
             return View(new UserTokenSummaryViewModel());
         }
 
+        var roleClaim = principal.FindFirstValue(ClaimTypes.Role);
         var currentUser = new CurrentUserDto
         {
             UserId = userId,
-            Role = Enum.TryParse<UserRole>((User as ClaimsPrincipal)?.FindFirstValue(ClaimTypes.Role), out var role) ? role : UserRole.Student
+            Role = Enum.TryParse<UserRole>(roleClaim, out var role) ? role : UserRole.Student
         };
 
         var subscription = await _paymentService.GetMyActiveSubscriptionAsync(currentUser, cancellationToken);
