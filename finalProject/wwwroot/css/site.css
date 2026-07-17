@@ -127,7 +127,32 @@ a {
 .topbar-user {
   align-items: center;
   display: flex;
+  flex-wrap: nowrap;
   gap: 12px;
+  justify-content: flex-end;
+  white-space: nowrap;
+}
+
+.topbar-account-actions {
+  align-items: center;
+  display: inline-flex;
+  flex-wrap: nowrap;
+  gap: 10px;
+  justify-content: flex-end;
+  white-space: nowrap;
+}
+
+.topbar-account-actions form {
+  align-items: center;
+  display: inline-flex;
+  margin: 0;
+}
+
+.topbar-user-name {
+  color: #0f172a;
+  display: inline-flex;
+  font-weight: 500;
+  line-height: 1;
 }
 
 .content {

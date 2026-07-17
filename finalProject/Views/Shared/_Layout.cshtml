@@ -58,10 +58,12 @@
                     </div>
                     <div class="topbar-user">
                         <vc:user-token-summary />
-                        <span>@User.FindFirst(System.Security.Claims.ClaimTypes.GivenName)?.Value</span>
-                        <form asp-controller="Account" asp-action="Logout" method="post">
-                            <button type="submit" class="btn btn-outline-primary btn-sm">Đăng xuất</button>
-                        </form>
+                        <div class="topbar-account-actions">
+                            <span class="topbar-user-name">@User.FindFirst(System.Security.Claims.ClaimTypes.GivenName)?.Value</span>
+                            <form asp-controller="Account" asp-action="Logout" method="post">
+                                <button type="submit" class="btn btn-outline-primary btn-sm">Đăng xuất</button>
+                            </form>
+                        </div>
                     </div>
                 </header>
             }
