@@ -84,6 +84,28 @@ public class PaymentsController : Controller
     }
 
     [Authorize(Roles = StudyMateRoles.Teacher + "," + StudyMateRoles.Student)]
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> CancelSubscription(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _paymentService.CancelMyActiveSubscriptionAsync(GetCurrentUser(), cancellationToken);
+            TempData["StatusMessage"] = "Đã hủy gói đăng ký hiện tại.";
+        }
+        catch (InvalidOperationException ex)
+        {
+            TempData["ErrorMessage"] = ex.Message;
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            TempData["ErrorMessage"] = ex.Message;
+        }
+
+        return RedirectToAction(nameof(Index));
+    }
+
+    [Authorize(Roles = StudyMateRoles.Teacher + "," + StudyMateRoles.Student)]
     public async Task<IActionResult> Checkout(int id, CancellationToken cancellationToken)
     {
         var currentUser = GetCurrentUser();

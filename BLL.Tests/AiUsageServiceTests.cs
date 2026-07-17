@@ -9,6 +9,35 @@ namespace BLL.Tests;
 public class AiUsageServiceTests
 {
     [Fact]
+    public async Task LogUsageAsync_DeductsTotalTokens_FromUserActiveSubscription()
+    {
+        var subscription = new UserSubscription
+        {
+            UserId = 7,
+            RemainingTokens = 50_000,
+            IsActive = true,
+            EndDate = DateTime.UtcNow.AddDays(7)
+        };
+        var subscriptionRepository = new FakeUserSubscriptionRepository(subscription);
+        var service = new AiUsageService(
+            new FakeAiUsageRepository(Array.Empty<AiUsageLog>()),
+            new AiCostEstimator(),
+            subscriptionRepository);
+
+        await service.LogUsageAsync(new CreateAiUsageLogDto
+        {
+            UserId = 7,
+            OperationType = AiOperationType.ChatCompletion,
+            ModelName = "gemini",
+            PromptTokens = 8,
+            CompletionTokens = 10
+        });
+
+        Assert.Equal(49_982, subscription.RemainingTokens);
+        Assert.Same(subscription, Assert.Single(subscriptionRepository.UpdatedSubscriptions));
+    }
+
+    [Fact]
     public async Task GetDashboardAsync_ReturnsMonthlyTotals_ForAdmin()
     {
         var logs = new[]
@@ -34,7 +63,7 @@ public class AiUsageServiceTests
                 CreatedAt = new DateTime(2026, 7, 6, 0, 0, 0, DateTimeKind.Utc)
             }
         };
-        var service = new AiUsageService(new FakeAiUsageRepository(logs), new AiCostEstimator());
+        var service = new AiUsageService(new FakeAiUsageRepository(logs), new AiCostEstimator(), new FakeUserSubscriptionRepository());
 
         var dashboard = await service.GetDashboardAsync(
             new CurrentUserDto { UserId = 1, Role = UserRole.Admin },
@@ -54,7 +83,7 @@ public class AiUsageServiceTests
     [Fact]
     public async Task GetDashboardAsync_Throws_WhenUserIsNotAdmin()
     {
-        var service = new AiUsageService(new FakeAiUsageRepository(Array.Empty<AiUsageLog>()), new AiCostEstimator());
+        var service = new AiUsageService(new FakeAiUsageRepository(Array.Empty<AiUsageLog>()), new AiCostEstimator(), new FakeUserSubscriptionRepository());
 
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() => service.GetDashboardAsync(
             new CurrentUserDto { UserId = 2, Role = UserRole.Teacher },
@@ -91,7 +120,7 @@ public class AiUsageServiceTests
                 TotalTokens = 50
             }
         };
-        var service = new AiUsageService(new FakeAiUsageRepository(logs), new AiCostEstimator());
+        var service = new AiUsageService(new FakeAiUsageRepository(logs), new AiCostEstimator(), new FakeUserSubscriptionRepository());
 
         var dashboard = await service.GetDashboardAsync(
             new CurrentUserDto { UserId = 1, Role = UserRole.Admin },
@@ -131,7 +160,7 @@ public class AiUsageServiceTests
                 TotalTokens = 50
             }
         };
-        var service = new AiUsageService(new FakeAiUsageRepository(logs), new AiCostEstimator());
+        var service = new AiUsageService(new FakeAiUsageRepository(logs), new AiCostEstimator(), new FakeUserSubscriptionRepository());
 
         var dashboard = await service.GetDashboardAsync(
             new CurrentUserDto { UserId = 1, Role = UserRole.Admin },
@@ -174,7 +203,7 @@ public class AiUsageServiceTests
                 EstimatedCost = 0.50m
             }
         };
-        var service = new AiUsageService(new FakeAiUsageRepository(logs), new AiCostEstimator());
+        var service = new AiUsageService(new FakeAiUsageRepository(logs), new AiCostEstimator(), new FakeUserSubscriptionRepository());
 
         var dashboard = await service.GetDashboardAsync(
             new CurrentUserDto { UserId = 1, Role = UserRole.Admin },
@@ -217,7 +246,7 @@ public class AiUsageServiceTests
                 EstimatedCost = 0.05m
             }
         };
-        var service = new AiUsageService(new FakeAiUsageRepository(logs), new AiCostEstimator());
+        var service = new AiUsageService(new FakeAiUsageRepository(logs), new AiCostEstimator(), new FakeUserSubscriptionRepository());
 
         var dashboard = await service.GetDashboardAsync(
             new CurrentUserDto { UserId = 1, Role = UserRole.Admin },
@@ -281,7 +310,7 @@ public class AiUsageServiceTests
                 EstimatedCost = 0.40m
             }
         };
-        var service = new AiUsageService(new FakeAiUsageRepository(logs), new AiCostEstimator());
+        var service = new AiUsageService(new FakeAiUsageRepository(logs), new AiCostEstimator(), new FakeUserSubscriptionRepository());
 
         var dashboard = await service.GetDashboardAsync(
             new CurrentUserDto { UserId = 1, Role = UserRole.Admin },
@@ -314,12 +343,55 @@ public class AiUsageServiceTests
 
         public Task AddAsync(AiUsageLog usageLog, CancellationToken cancellationToken = default)
         {
-            throw new NotImplementedException();
+            return Task.CompletedTask;
         }
 
         public Task<IReadOnlyList<AiUsageLog>> GetAllAsync(CancellationToken cancellationToken = default)
         {
             return Task.FromResult(_logs);
         }
+    }
+
+    private sealed class FakeUserSubscriptionRepository : IUserSubscriptionRepository
+    {
+        private readonly UserSubscription? _subscription;
+
+        public FakeUserSubscriptionRepository(UserSubscription? subscription = null)
+        {
+            _subscription = subscription;
+        }
+
+        public List<UserSubscription> UpdatedSubscriptions { get; } = new();
+
+        public Task<IReadOnlyList<UserSubscription>> GetByUserAsync(int userId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+
+        public Task<UserSubscription?> GetActiveByUserAsync(int userId, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(_subscription?.UserId == userId ? _subscription : null);
+        }
+
+        public Task<UserSubscription?> GetLatestActiveByUserAsync(int userId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+
+        public Task<UserSubscription?> GetByIdWithPackageAsync(int id, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+
+        public Task<IReadOnlyList<UserSubscription>> GetAllActiveWithUsersAsync(CancellationToken cancellationToken = default) => throw new NotImplementedException();
+
+        public Task<bool> HasActiveSubscriptionAsync(int userId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+
+        public void Add(UserSubscription subscription) => throw new NotImplementedException();
+
+        public Task AddAsync(UserSubscription subscription, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+
+        public Task UpdateAsync(UserSubscription subscription, CancellationToken cancellationToken = default)
+        {
+            UpdatedSubscriptions.Add(subscription);
+            return Task.CompletedTask;
+        }
+
+        public Task SaveChangesAsync(CancellationToken cancellationToken = default) => throw new NotImplementedException();
+
+        public Task DeactivateExpiredAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
+
+        public Task<int> ProcessScheduledDowngradesAsync(DateTime now, CancellationToken cancellationToken = default) => Task.FromResult(0);
     }
 }

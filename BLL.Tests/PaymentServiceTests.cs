@@ -295,6 +295,44 @@ public class PaymentServiceTests
             new CurrentUserDto { UserId = 1, Role = UserRole.Admin }, 999, null));
     }
 
+    [Fact]
+    public async Task CancelMyActiveSubscriptionAsync_DeactivatesCurrentUsersActiveSubscription()
+    {
+        var subscription = new UserSubscription
+        {
+            Id = 12,
+            UserId = 4,
+            SubscriptionPackageId = 1,
+            PaymentId = 1,
+            StartDate = DateTime.UtcNow.AddDays(-1),
+            EndDate = DateTime.UtcNow.AddDays(29),
+            RemainingTokens = 48_000,
+            IsActive = true,
+            SubscriptionPackage = new SubscriptionPackage { Id = 1, Name = "Gói Sinh viên", MaxTokens = 50_000 }
+        };
+        var subscriptionRepository = new FakeUserSubscriptionRepository();
+        subscriptionRepository.Add(subscription);
+        var service = CreateService(subscriptionRepository: subscriptionRepository);
+
+        var result = await service.CancelMyActiveSubscriptionAsync(
+            new CurrentUserDto { UserId = 4, Role = UserRole.Student });
+
+        Assert.NotNull(result);
+        Assert.False(subscription.IsActive);
+        Assert.NotNull(subscription.DeactivatedAt);
+        Assert.Equal(subscription.Id, result.Id);
+        Assert.False(result.IsActive);
+    }
+
+    [Fact]
+    public async Task CancelMyActiveSubscriptionAsync_Throws_WhenAdminRequests()
+    {
+        var service = CreateService();
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => service.CancelMyActiveSubscriptionAsync(
+            new CurrentUserDto { UserId = 1, Role = UserRole.Admin }));
+    }
+
     private static PaymentService CreateService(
         IReadOnlyList<Payment>? payments = null,
         IReadOnlyList<SubscriptionPackage>? packages = null,

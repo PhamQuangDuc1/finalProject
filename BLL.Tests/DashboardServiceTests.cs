@@ -27,11 +27,36 @@ public class DashboardServiceTests
             new FakeDepartmentRepository(),
             new FakeSubjectRepository(new[] { new Subject { Name = "PRN222", IsActive = true } }),
             new FakeUserRepository(),
-            new FakeAiUsageRepository());
+            new FakeAiUsageRepository(),
+            new FakeUserSubscriptionRepository());
 
         var dashboard = await service.GetDashboardAsync(new CurrentUserDto { UserId = 7, Role = UserRole.Student });
 
         Assert.Equal(42, dashboard.RecentUploads.Single().Id);
+    }
+
+    [Fact]
+    public async Task GetDashboardAsync_IncludesRemainingTokens_ForStudentActiveSubscription()
+    {
+        var subscription = new UserSubscription
+        {
+            UserId = 7,
+            RemainingTokens = 1234,
+            IsActive = true,
+            EndDate = DateTime.UtcNow.AddDays(7)
+        };
+        var service = new DashboardService(
+            new FakeDocumentRepository(Array.Empty<Document>()),
+            new FakeDepartmentRepository(),
+            new FakeSubjectRepository(Array.Empty<Subject>()),
+            new FakeUserRepository(),
+            new FakeAiUsageRepository(),
+            new FakeUserSubscriptionRepository(subscription));
+
+        var dashboard = await service.GetDashboardAsync(new CurrentUserDto { UserId = 7, Role = UserRole.Student });
+
+        var tokenMetric = Assert.Single(dashboard.Metrics, metric => metric.Label == "Token còn lại");
+        Assert.Equal("1,234", tokenMetric.Value);
     }
 
     private sealed class FakeDocumentRepository : IDocumentRepository
@@ -123,5 +148,42 @@ public class DashboardServiceTests
         public Task AddAsync(AiUsageLog usageLog, CancellationToken cancellationToken = default) => throw new NotImplementedException();
 
         public Task<IReadOnlyList<AiUsageLog>> GetAllAsync(CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<AiUsageLog>>(Array.Empty<AiUsageLog>());
+    }
+
+    private sealed class FakeUserSubscriptionRepository : IUserSubscriptionRepository
+    {
+        private readonly UserSubscription? _subscription;
+
+        public FakeUserSubscriptionRepository(UserSubscription? subscription = null)
+        {
+            _subscription = subscription;
+        }
+
+        public Task<IReadOnlyList<UserSubscription>> GetByUserAsync(int userId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+
+        public Task<UserSubscription?> GetActiveByUserAsync(int userId, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(_subscription?.UserId == userId ? _subscription : null);
+        }
+
+        public Task<UserSubscription?> GetLatestActiveByUserAsync(int userId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+
+        public Task<UserSubscription?> GetByIdWithPackageAsync(int id, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+
+        public Task<IReadOnlyList<UserSubscription>> GetAllActiveWithUsersAsync(CancellationToken cancellationToken = default) => throw new NotImplementedException();
+
+        public Task<bool> HasActiveSubscriptionAsync(int userId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+
+        public void Add(UserSubscription subscription) => throw new NotImplementedException();
+
+        public Task AddAsync(UserSubscription subscription, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+
+        public Task UpdateAsync(UserSubscription subscription, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+
+        public Task SaveChangesAsync(CancellationToken cancellationToken = default) => throw new NotImplementedException();
+
+        public Task DeactivateExpiredAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
+
+        public Task<int> ProcessScheduledDowngradesAsync(DateTime now, CancellationToken cancellationToken = default) => Task.FromResult(0);
     }
 }

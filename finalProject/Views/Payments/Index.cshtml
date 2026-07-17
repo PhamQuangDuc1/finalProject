@@ -50,9 +50,19 @@
                 <p class="dashboard-kicker">Đăng ký hiện tại</p>
                 <h2 class="section-title mb-0">Trạng thái gói của bạn</h2>
             </div>
-            <span class="badge rounded-pill @(activeSubscription is null ? "text-bg-secondary" : "text-bg-success") fs-6">
-                @(activeSubscription is null ? "Chưa kích hoạt" : "Đang hoạt động")
-            </span>
+            <div class="d-flex align-items-center flex-wrap gap-2">
+                <span class="badge rounded-pill @(activeSubscription is null ? "text-bg-secondary" : "text-bg-success") fs-6">
+                    @(activeSubscription is null ? "Chưa kích hoạt" : "Đang hoạt động")
+                </span>
+                @if (activeSubscription is not null)
+                {
+                    <form asp-action="CancelSubscription" asp-controller="Payments" method="post" class="m-0"
+                          onsubmit="return confirm('Bạn chắc chắn muốn hủy gói đăng ký hiện tại? Token còn lại sẽ không sử dụng được sau khi hủy.');">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-outline-danger btn-sm">Hủy đăng ký</button>
+                    </form>
+                }
+            </div>
         </div>
         @if (activeSubscription is null)
         {

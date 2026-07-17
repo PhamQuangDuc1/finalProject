@@ -217,6 +217,25 @@ public class PaymentService : IPaymentService
         return subscription is null ? null : ToDto(subscription);
     }
 
+    public async Task<UserSubscriptionDto?> CancelMyActiveSubscriptionAsync(CurrentUserDto currentUser, CancellationToken cancellationToken = default)
+    {
+        AuthorizationGuard.RequireBuyer(currentUser);
+        var now = DateTime.UtcNow;
+        await _userSubscriptionRepository.ProcessScheduledDowngradesAsync(now, cancellationToken);
+        await _userSubscriptionRepository.DeactivateExpiredAsync(cancellationToken);
+
+        var subscription = await _userSubscriptionRepository.GetActiveByUserAsync(currentUser.UserId, cancellationToken)
+            ?? throw new InvalidOperationException("You do not have an active subscription to cancel.");
+
+        subscription.IsActive = false;
+        subscription.DeactivatedAt = now;
+        subscription.ScheduledDowngradePackageId = null;
+
+        await _userSubscriptionRepository.UpdateAsync(subscription, cancellationToken);
+
+        return ToDto(subscription);
+    }
+
     public async Task<IReadOnlyList<UserSubscriptionDto>> GetMySubscriptionsAsync(CurrentUserDto currentUser, CancellationToken cancellationToken = default)
     {
         AuthorizationGuard.RequireAuthenticated(currentUser);

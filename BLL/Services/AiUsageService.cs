@@ -9,15 +9,21 @@ public class AiUsageService : IAiUsageService
 {
     private readonly IAiUsageRepository _aiUsageRepository;
     private readonly IAiCostEstimator _costEstimator;
+    private readonly IUserSubscriptionRepository _userSubscriptionRepository;
 
-    public AiUsageService(IAiUsageRepository aiUsageRepository, IAiCostEstimator costEstimator)
+    public AiUsageService(
+        IAiUsageRepository aiUsageRepository,
+        IAiCostEstimator costEstimator,
+        IUserSubscriptionRepository userSubscriptionRepository)
     {
         _aiUsageRepository = aiUsageRepository;
         _costEstimator = costEstimator;
+        _userSubscriptionRepository = userSubscriptionRepository;
     }
 
-    public Task LogUsageAsync(CreateAiUsageLogDto usageLog, CancellationToken cancellationToken = default)
+    public async Task LogUsageAsync(CreateAiUsageLogDto usageLog, CancellationToken cancellationToken = default)
     {
+        var totalTokens = usageLog.PromptTokens + usageLog.CompletionTokens;
         var estimatedCost = usageLog.EstimatedCost > 0
             ? usageLog.EstimatedCost
             : _costEstimator.EstimateCost(usageLog.ModelName, usageLog.PromptTokens, usageLog.CompletionTokens);
@@ -30,12 +36,28 @@ public class AiUsageService : IAiUsageService
             ModelName = usageLog.ModelName,
             PromptTokens = usageLog.PromptTokens,
             CompletionTokens = usageLog.CompletionTokens,
-            TotalTokens = usageLog.PromptTokens + usageLog.CompletionTokens,
+            TotalTokens = totalTokens,
             EstimatedCost = estimatedCost,
             CreatedAt = DateTime.UtcNow
         };
 
-        return _aiUsageRepository.AddAsync(entity, cancellationToken);
+        await _aiUsageRepository.AddAsync(entity, cancellationToken);
+
+        if (usageLog.UserId is null || totalTokens <= 0)
+        {
+            return;
+        }
+
+        await _userSubscriptionRepository.ProcessScheduledDowngradesAsync(DateTime.UtcNow, cancellationToken);
+        await _userSubscriptionRepository.DeactivateExpiredAsync(cancellationToken);
+        var subscription = await _userSubscriptionRepository.GetActiveByUserAsync(usageLog.UserId.Value, cancellationToken);
+        if (subscription is null)
+        {
+            return;
+        }
+
+        subscription.RemainingTokens = Math.Max(0, subscription.RemainingTokens - totalTokens);
+        await _userSubscriptionRepository.UpdateAsync(subscription, cancellationToken);
     }
 
     public async Task<IReadOnlyList<AiUsageMonthlySummaryDto>> GetMonthlySummaryAsync(CurrentUserDto currentUser, CancellationToken cancellationToken = default)

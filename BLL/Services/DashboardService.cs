@@ -12,19 +12,22 @@ public class DashboardService : IDashboardService
     private readonly ISubjectRepository _subjectRepository;
     private readonly IUserRepository _userRepository;
     private readonly IAiUsageRepository _aiUsageRepository;
+    private readonly IUserSubscriptionRepository _userSubscriptionRepository;
 
     public DashboardService(
         IDocumentRepository documentRepository,
         IDepartmentRepository departmentRepository,
         ISubjectRepository subjectRepository,
         IUserRepository userRepository,
-        IAiUsageRepository aiUsageRepository)
+        IAiUsageRepository aiUsageRepository,
+        IUserSubscriptionRepository userSubscriptionRepository)
     {
         _documentRepository = documentRepository;
         _departmentRepository = departmentRepository;
         _subjectRepository = subjectRepository;
         _userRepository = userRepository;
         _aiUsageRepository = aiUsageRepository;
+        _userSubscriptionRepository = userSubscriptionRepository;
     }
 
     public async Task<DashboardDto> GetDashboardAsync(CurrentUserDto currentUser, CancellationToken cancellationToken = default)
@@ -33,7 +36,7 @@ public class DashboardService : IDashboardService
         {
             UserRole.Admin => await GetAdminDashboardAsync(cancellationToken),
             UserRole.Teacher => await GetTeacherDashboardAsync(currentUser.UserId, cancellationToken),
-            UserRole.Student => await GetStudentDashboardAsync(cancellationToken),
+            UserRole.Student => await GetStudentDashboardAsync(currentUser.UserId, cancellationToken),
             _ => throw new UnauthorizedAccessException("Unsupported dashboard role.")
         };
     }
@@ -97,10 +100,13 @@ public class DashboardService : IDashboardService
         };
     }
 
-    private async Task<DashboardDto> GetStudentDashboardAsync(CancellationToken cancellationToken)
+    private async Task<DashboardDto> GetStudentDashboardAsync(int userId, CancellationToken cancellationToken)
     {
         var documents = await _documentRepository.GetIndexedActiveAsync(cancellationToken);
         var subjects = await _subjectRepository.GetAllAsync(cancellationToken);
+        await _userSubscriptionRepository.ProcessScheduledDowngradesAsync(DateTime.UtcNow, cancellationToken);
+        await _userSubscriptionRepository.DeactivateExpiredAsync(cancellationToken);
+        var activeSubscription = await _userSubscriptionRepository.GetActiveByUserAsync(userId, cancellationToken);
 
         return new DashboardDto
         {
@@ -110,7 +116,8 @@ public class DashboardService : IDashboardService
             {
                 new DashboardMetricDto { Label = "Tài liệu khả dụng", Value = documents.Count.ToString() },
                 new DashboardMetricDto { Label = "Đã xem gần đây", Value = "0" },
-                new DashboardMetricDto { Label = "Môn học", Value = subjects.Count(subject => subject.IsActive).ToString() }
+                new DashboardMetricDto { Label = "Môn học", Value = subjects.Count(subject => subject.IsActive).ToString() },
+                new DashboardMetricDto { Label = "Token còn lại", Value = (activeSubscription?.RemainingTokens ?? 0).ToString("N0") }
             },
             RecentUploads = documents
                 .OrderByDescending(document => document.UploadedAt)

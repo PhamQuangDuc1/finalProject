@@ -23,6 +23,8 @@ public interface IPaymentService
 
     Task<UserSubscriptionDto?> GetMyActiveSubscriptionAsync(CurrentUserDto currentUser, CancellationToken cancellationToken = default);
 
+    Task<UserSubscriptionDto?> CancelMyActiveSubscriptionAsync(CurrentUserDto currentUser, CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<UserSubscriptionDto>> GetMySubscriptionsAsync(CurrentUserDto currentUser, CancellationToken cancellationToken = default);
 
     Task DemoConfirmAsync(CurrentUserDto currentUser, int paymentId, string? note, CancellationToken cancellationToken = default);
