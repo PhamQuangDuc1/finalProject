@@ -239,6 +239,29 @@ public class PaymentsController : Controller
         }
     }
 
+    [Authorize(Roles = StudyMateRoles.Admin + "," + StudyMateRoles.Teacher + "," + StudyMateRoles.Student)]
+    [HttpPost("Payments/DemoConfirm/{id:int}")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DemoConfirm(int id, CancellationToken cancellationToken)
+    {
+        var currentUser = GetCurrentUser();
+        try
+        {
+            await _paymentService.DemoConfirmAsync(currentUser, id, "Xác nhận demo thành công", cancellationToken);
+            TempData["StatusMessage"] = $"Đã xác nhận thanh toán demo cho đơn #{id}. Gói đã được kích hoạt.";
+        }
+        catch (InvalidOperationException ex)
+        {
+            TempData["ErrorMessage"] = ex.Message;
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            TempData["ErrorMessage"] = ex.Message;
+        }
+
+        return RedirectToAction(nameof(Index));
+    }
+
     private string GetClientIpAddress()
     {
         var forwarded = HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault();

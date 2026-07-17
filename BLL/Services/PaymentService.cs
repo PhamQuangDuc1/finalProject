@@ -228,6 +228,33 @@ public class PaymentService : IPaymentService
         return subscriptions.Select(ToDto).ToList();
     }
 
+    public async Task DemoConfirmAsync(CurrentUserDto currentUser, int paymentId, string? note, CancellationToken cancellationToken = default)
+    {
+        var payment = await _paymentRepository.GetByIdAsync(paymentId, cancellationToken)
+            ?? throw new InvalidOperationException("Payment was not found.");
+
+        if (payment.UserId != currentUser.UserId && currentUser.Role != UserRole.Admin)
+        {
+            throw new UnauthorizedAccessException("You can only confirm your own payments.");
+        }
+
+        if (payment.Status != PaymentStatus.Pending)
+        {
+            throw new InvalidOperationException($"Only Pending payments can be confirmed. Current status: {payment.Status}.");
+        }
+
+        var now = DateTime.UtcNow;
+        payment.Status = PaymentStatus.Completed;
+        payment.CompletedAt = now;
+        payment.Note = string.IsNullOrWhiteSpace(note) ? "Xác nhận demo thành công" : note.Trim();
+
+        await _paymentRepository.UpdateAsync(payment, cancellationToken);
+
+        var package = await _packageRepository.GetByIdAsync(payment.SubscriptionPackageId, cancellationToken)
+            ?? throw new InvalidOperationException("Subscription package for this payment was not found.");
+        await ActivateSubscriptionAsync(payment, package, cancellationToken);
+    }
+
     private async Task UpdatePaymentStatusAsync(
         CurrentUserDto currentUser,
         int paymentId,
